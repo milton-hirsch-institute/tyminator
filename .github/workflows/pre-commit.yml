@@ -1,0 +1,24 @@
+name: Run pre-commit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pre-commit:
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10']
+    name: Run pre-commit checks on python ${{ matrix.python-version }}
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-python@v3
+      with:
+        python-version: "${{ matrix.python-version }}"
+        architecture: x64
+
+    - run: pipx install poetry
+    - run: pipx install pre-commit
+    - run: pre-commit run -a
