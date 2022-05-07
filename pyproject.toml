@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "pytest-timing"
+version = "0.1.0"
+description = "pytest plugin for testing time-dependent functionality"
+authors = [
+    "Rafe Kaplan <slobberchops@gmail.com>",
+]
+packages = [
+    {include = "pytest_timing", from = "."}
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pytest = "^7.1"
+
+[tool.poetry.dev-dependencies]
+black = "^22.0"
+coverage = "^6.3"
+flake8 = "^4.0"
+isort = "^5.10"
+pyright = "^1.1"
+pytest-cov = "^3.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+target-version = ['py39']
+
+[tool.isort]
+force_single_line = true
+profile = "black"
+
+[tool.pyright]
+pythonVersion = "3.9"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportPrivateUsage = true
+reportConstantRedefinition = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportOverlappingOverload = true
+reportUnknownLambdaType = true
+reportInvalidTypeVarUse = true
+reportUnnecessaryCast = true
+reportUnsupportedDunderAll = true
+
+[tool.pytest.ini_options]
