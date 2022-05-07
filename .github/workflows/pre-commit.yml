@@ -22,4 +22,5 @@ jobs:
 
     - run: pipx install poetry
     - run: pipx install pre-commit
+    - run: poetry install
     - run: pre-commit run -a
