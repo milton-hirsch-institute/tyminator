@@ -63,7 +63,7 @@ class Clock:
         return self.current_utc_datetime.timestamp()
 
     @property
-    def elapsed_time(self) -> datetime.timedelta:
+    def elapsed(self) -> datetime.timedelta:
         return self.current_tz_datetime - self.tz_start
 
     @property

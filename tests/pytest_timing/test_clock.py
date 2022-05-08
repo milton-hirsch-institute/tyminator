@@ -102,7 +102,7 @@ class TestClock:
         for _ in range(steps):
             clock.next_datetime()
 
-        assert clock.elapsed_time == clock_step * steps
+        assert clock.elapsed == clock_step * steps
 
     @staticmethod
     def test_current_utc_datetime(clock, clock_start, clock_local_tz):
