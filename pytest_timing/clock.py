@@ -35,16 +35,16 @@ class Clock:
         return self.__current_datetime
 
     @property
-    def tz_current_datetime(self) -> datetime.datetime:
+    def current_tz_datetime(self) -> datetime.datetime:
         return self.__to_tz_datetime(self.__current_datetime)
 
     @property
-    def utc_current_datetime(self) -> datetime.datetime:
-        return self.tz_current_datetime.astimezone(datetime.timezone.utc)
+    def current_utc_datetime(self) -> datetime.datetime:
+        return self.current_tz_datetime.astimezone(datetime.timezone.utc)
 
     @property
     def elapsed_time(self) -> datetime.timedelta:
-        return self.tz_current_datetime - self.epoch
+        return self.current_tz_datetime - self.epoch
 
     @property
     def epoch(self):

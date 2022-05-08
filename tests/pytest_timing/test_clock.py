@@ -18,9 +18,9 @@ class TestConstructor:
         assert clock.current_datetime == clock_epoch
 
     @staticmethod
-    def test_tz_current_datetime(clock, clock_epoch, clock_local_tz):
+    def test_current_tz_datetime(clock, clock_epoch, clock_local_tz):
         expected = clock_epoch.replace(tzinfo=clock_local_tz)
-        assert clock.tz_current_datetime == expected
+        assert clock.current_tz_datetime == expected
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -47,10 +47,10 @@ class TestConstructor:
         assert clock.elapsed_time == clock_step * steps
 
     @staticmethod
-    def test_utc_current_datetime(clock, clock_epoch, clock_local_tz):
+    def test_current_utc_datetime(clock, clock_epoch, clock_local_tz):
         expected = clock_epoch.replace(tzinfo=clock_local_tz)
         expected = expected.astimezone(datetime.timezone.utc)
-        assert clock.utc_current_datetime == expected
+        assert clock.current_utc_datetime == expected
 
     @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
     class TestNextDatetime:
@@ -65,10 +65,10 @@ class TestConstructor:
         def test_tz_datetime(clock, clock_epoch):
             for step in range(4):
                 next_tz_datetime = clock.next_tz_datetime()
-                assert next_tz_datetime == clock.tz_current_datetime - clock.step
+                assert next_tz_datetime == clock.current_tz_datetime - clock.step
 
         @staticmethod
         def test_utc_datetime(clock, clock_epoch):
             for step in range(4):
                 next_utc_datetime = clock.next_utc_datetime()
-                assert next_utc_datetime == clock.utc_current_datetime - clock.step
+                assert next_utc_datetime == clock.current_utc_datetime - clock.step
