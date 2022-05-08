@@ -67,6 +67,10 @@ class Clock:
         return self.current_tz_datetime - self.tz_epoch
 
     @property
+    def local_tz(self):
+        return self.__local_tz
+
+    @property
     def epoch(self) -> datetime.datetime:
         return self.__epoch
 
