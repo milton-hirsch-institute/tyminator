@@ -1,4 +1,5 @@
 import datetime
+import time
 
 import pytest
 
@@ -146,3 +147,12 @@ class TestConstructor:
                     next_utc_timestamp
                     == (clock.current_utc_datetime - clock.step).timestamp()
                 )
+
+
+def test_time_function(clock):
+    original_time = time.time
+    with clock_module.installed(clock) as (c, time_func):
+        assert c is clock
+        assert time_func is original_time
+        assert time.time == clock.next_timestamp
+    assert time.time == original_time
