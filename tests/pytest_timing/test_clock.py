@@ -133,6 +133,13 @@ class TestClock:
                 assert next_datetime == clock.current_datetime - clock.step
 
         @staticmethod
+        def test_datetime_locked(clock):
+            with clock.lock():
+                with pytest.raises(clock_module.LockError, match="^clock is locked$"):
+                    clock.next_datetime()
+                assert clock.current_datetime == clock.start
+
+        @staticmethod
         def test_tz_datetime(clock, clock_start):
             for step in range(4):
                 next_tz_datetime = clock.next_tz_datetime()
@@ -144,8 +151,29 @@ class TestClock:
                 next_utc_datetime = clock.next_utc_datetime()
                 assert next_utc_datetime == clock.current_utc_datetime - clock.step
 
+        class TestTimeFunction:
+            @staticmethod
+            def test_unlocked(clock):
+                for step in range(4):
+                    next_timestamp = clock.time_function()
+                    assert (
+                        next_timestamp == (clock.start + clock.step * step).timestamp()
+                    )
+                    assert (
+                        next_timestamp
+                        == (clock.current_datetime - clock.step).timestamp()
+                    )
+
+            @staticmethod
+            def test_locked(clock):
+                with clock.lock():
+                    for step in range(4):
+                        next_timestamp = clock.time_function()
+                        assert next_timestamp == clock.start.timestamp()
+                        assert clock.current_timestamp == next_timestamp
+
         @staticmethod
-        def test_timestamp(clock, clock_start):
+        def test_next_timestamp(clock, clock_start):
             for step in range(4):
                 next_timestamp = clock.next_timestamp()
                 assert next_timestamp == (clock_start + clock.step * step).timestamp()
@@ -154,7 +182,7 @@ class TestClock:
                 )
 
         @staticmethod
-        def test_tz_timestamp(clock, clock_start):
+        def test_next_tz_timestamp(clock, clock_start):
             for step in range(4):
                 next_tz_timestamp = clock.next_tz_timestamp()
                 assert (
@@ -163,7 +191,7 @@ class TestClock:
                 )
 
         @staticmethod
-        def test_utc_timestamp(clock, clock_start):
+        def test_next_utc_timestamp(clock, clock_start):
             for step in range(4):
                 next_utc_timestamp = clock.next_utc_timestamp()
                 assert (
@@ -190,10 +218,26 @@ class TestClock:
                 assert utc_dt_at_step == clock.utc_start + (clock.step * step)
 
 
-def test_time_function(clock):
+class TestClockLock:
+    @staticmethod
+    def test_is_locked(clock):
+        assert not clock.is_locked
+        with clock.lock():
+            assert clock.is_locked
+        assert not clock.is_locked
+
+    @staticmethod
+    def test_nested_lock(clock):
+        with clock.lock():
+            with pytest.raises(clock_module.LockError, match=r"^already locked$"):
+                with clock.lock():
+                    pytest.fail("nested locks not supported")
+
+
+def test_install(clock):
     original_time = time.time
     with clock_module.installed(clock) as (c, time_func):
         assert c is clock
         assert time_func is original_time
-        assert time.time == clock.next_timestamp
+        assert time.time == clock.time_function
     assert time.time == original_time

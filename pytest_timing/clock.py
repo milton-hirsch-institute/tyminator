@@ -7,6 +7,10 @@ from typing import Union
 ClockStep = Union[int, datetime.timedelta]
 
 
+class LockError(Exception):
+    """Raised when trying to take a step when clock not ready."""
+
+
 def as_timedelta(step: ClockStep) -> datetime.timedelta:
     if isinstance(step, int):
         if step <= 0:
@@ -23,6 +27,7 @@ class Clock:
     __utc_start: datetime.datetime
     __local_tz: datetime.tzinfo
     __step: datetime.timedelta
+    __is_locked: bool = False
 
     def __init__(
         self,
@@ -86,12 +91,18 @@ class Clock:
     def step(self) -> datetime.timedelta:
         return self.__step
 
+    @property
+    def is_locked(self) -> bool:
+        return self.__is_locked
+
     def elapse(self, steps: int) -> None:
         if steps <= 0:
             raise ValueError("steps must be positive integer")
         self.__current_datetime = self.__current_datetime + self.step * steps
 
     def next_datetime(self) -> datetime.datetime:
+        if self.__is_locked:
+            raise LockError("clock is locked")
         current_datetime = self.__current_datetime
         self.elapse(1)
         return current_datetime
@@ -102,7 +113,15 @@ class Clock:
     def next_utc_datetime(self) -> datetime.datetime:
         return self.next_tz_datetime().astimezone(datetime.timezone.utc)
 
+    def time_function(self) -> float:
+        try:
+            return self.next_timestamp()
+        except LockError:
+            return self.current_timestamp
+
     def next_timestamp(self) -> float:
+        if self.__is_locked:
+            ...
         current_timestamp = self.current_timestamp
         self.next_datetime()
         return current_timestamp
@@ -126,12 +145,22 @@ class Clock:
     def utc_dt_at_step(self, step: int) -> datetime.datetime:
         return self.tz_dt_at_step(step).astimezone(datetime.timezone.utc)
 
+    @contextlib.contextmanager
+    def lock(self):
+        if self.__is_locked:
+            raise LockError("already locked")
+        try:
+            self.__is_locked = True
+            yield
+        finally:
+            del self.__is_locked
+
 
 @contextlib.contextmanager
 def installed(clock: Clock):
     original_time = time.time
     try:
-        time.time = clock.next_timestamp
+        time.time = clock.time_function
         yield clock, original_time
     finally:
         time.time = original_time
@@ -140,6 +169,7 @@ def installed(clock: Clock):
 __all__ = (
     "Clock",
     "ClockStep",
+    "LockError",
     "as_timedelta",
     "installed",
 )
