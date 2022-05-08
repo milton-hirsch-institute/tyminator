@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from pytest_timing import clock as clock_module
-from tests.pytest_timing import const
+from pytest_timing import defaults
 
 
 class TestAsTimedelta:
@@ -26,7 +26,7 @@ class TestAsTimedelta:
         assert clock_module.as_timedelta(expected) is expected
 
 
-@pytest.mark.parametrize("clock_epoch", const.DEFAULT_EPOCHS)
+@pytest.mark.parametrize("clock_epoch", defaults.DEFAULT_EPOCHS)
 class TestConstructor:
     @staticmethod
     def test_epoch(clock, clock_epoch, clock_local_tz):
