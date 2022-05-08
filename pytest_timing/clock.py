@@ -33,10 +33,9 @@ class Clock:
         *,
         local_tz: datetime.tzinfo = datetime.timezone.utc,
     ):
-        self.__current_datetime = epoch
-        if epoch.tzinfo is None:
-            epoch = epoch.replace(tzinfo=local_tz)
-        self.__epoch = epoch
+        if epoch.tzinfo is not None:
+            raise ValueError("Epoch may not have tzinfo")
+        self.__epoch = self.__current_datetime = epoch
         self.__local_tz = local_tz
 
         self.__step = as_timedelta(step)
@@ -47,7 +46,7 @@ class Clock:
 
     @property
     def current_tz_datetime(self) -> datetime.datetime:
-        return self.__to_tz_datetime(self.__current_datetime)
+        return self.__current_datetime.replace(tzinfo=self.__local_tz)
 
     @property
     def current_utc_datetime(self) -> datetime.datetime:
@@ -67,15 +66,19 @@ class Clock:
 
     @property
     def elapsed_time(self) -> datetime.timedelta:
-        return self.current_tz_datetime - self.epoch
+        return self.current_tz_datetime - self.tz_epoch
 
     @property
     def epoch(self) -> datetime.datetime:
         return self.__epoch
 
     @functools.cached_property
+    def tz_epoch(self) -> datetime.datetime:
+        return self.__epoch.replace(tzinfo=self.__local_tz)
+
+    @functools.cached_property
     def utc_epoch(self) -> datetime.datetime:
-        return self.__epoch.astimezone(datetime.timezone.utc)
+        return self.tz_epoch.astimezone(datetime.timezone.utc)
 
     @property
     def step(self) -> datetime.timedelta:
@@ -92,28 +95,25 @@ class Clock:
         return current_datetime
 
     def next_tz_datetime(self) -> datetime.datetime:
-        return self.__to_tz_datetime(self.next_datetime())
+        return self.next_datetime().replace(tzinfo=self.__local_tz)
 
     def next_utc_datetime(self) -> datetime.datetime:
         return self.next_tz_datetime().astimezone(datetime.timezone.utc)
 
     def next_timestamp(self) -> float:
+        current_timestamp = self.current_timestamp
         self.next_datetime()
-        return self.current_timestamp
+        return current_timestamp
 
     def next_tz_timestamp(self) -> float:
+        current_tz_timestamp = self.current_tz_timestamp
         self.next_datetime()
-        return self.current_tz_timestamp
+        return current_tz_timestamp
 
     def next_utc_timestamp(self) -> float:
+        current_utc_timestamp = self.current_utc_timestamp
         self.next_datetime()
-        return self.current_utc_timestamp
-
-    def __to_tz_datetime(self, dt: datetime.datetime):
-        if dt.tzinfo is None:
-            return dt.replace(tzinfo=self.__local_tz)
-        else:
-            return dt
+        return current_utc_timestamp
 
 
 @contextlib.contextmanager
