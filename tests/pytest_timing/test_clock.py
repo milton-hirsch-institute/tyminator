@@ -26,49 +26,72 @@ class TestAsTimedelta:
         assert clock_module.as_timedelta(expected) is expected
 
 
-class TestConstructor:
-    @staticmethod
-    def test_tz_start(clock_start, clock_local_tz):
-        tz_start = clock_start.replace(tzinfo=clock_local_tz)
-        with pytest.raises(ValueError, match=r"^start may not have tzinfo$"):
-            clock_module.Clock(tz_start, clock_local_tz)
+class TestClock:
+    class TestConstructor:
+        @staticmethod
+        def test_tz_start(clock_start, clock_local_tz):
+            tz_start = clock_start.replace(tzinfo=clock_local_tz)
+            with pytest.raises(ValueError, match=r"^start may not have tzinfo$"):
+                clock_module.Clock(tz_start, clock_local_tz)
 
-    @staticmethod
-    def test_start(clock, clock_start, clock_local_tz):
-        assert clock.start == clock_start
-        clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
-        assert clock.tz_start == clock_tz_start
-        clock_utc_start = clock_tz_start.astimezone(datetime.timezone.utc)
-        assert clock.utc_start == clock_utc_start
+        @staticmethod
+        def test_start(clock, clock_start, clock_local_tz):
+            assert clock.start == clock_start
+            clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
+            assert clock.tz_start == clock_tz_start
+            clock_utc_start = clock_tz_start.astimezone(datetime.timezone.utc)
+            assert clock.utc_start == clock_utc_start
 
-    @staticmethod
-    def test_current_datetime(clock, clock_start, clock_step):
-        assert clock.current_datetime == clock_start
+        @staticmethod
+        def test_current_datetime(clock, clock_start, clock_step):
+            assert clock.current_datetime == clock_start
 
-    @staticmethod
-    def test_current_tz_datetime(clock, clock_start, clock_local_tz):
-        expected = clock_start.replace(tzinfo=clock_local_tz)
-        assert clock.current_tz_datetime == expected
+        @staticmethod
+        def test_current_tz_datetime(clock, clock_start, clock_local_tz):
+            expected = clock_start.replace(tzinfo=clock_local_tz)
+            assert clock.current_tz_datetime == expected
 
-    @staticmethod
-    @pytest.mark.parametrize(
-        "clock_step,expected",
-        [
-            (1, datetime.timedelta(seconds=1)),
-            (2, datetime.timedelta(seconds=2)),
-            (3, datetime.timedelta(seconds=3)),
-            (4, datetime.timedelta(seconds=4)),
-        ],
-    )
-    def test_int_step(clock, expected):
-        assert clock.step == expected
+        @staticmethod
+        def test_current_utc_datetime(clock, clock_start, clock_local_tz):
+            expected = clock_start.replace(tzinfo=clock_local_tz)
+            expected = expected.astimezone(datetime.timezone.utc)
+            assert clock.current_utc_datetime == expected
 
-    def test_current_timestamp(self, clock, clock_start, clock_local_tz):
-        assert clock.current_timestamp == clock_start.timestamp()
-        clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
-        assert clock.current_tz_timestamp == clock_tz_start.timestamp()
-        clock_utf_start = clock_tz_start.astimezone(datetime.timezone.utc)
-        assert clock.current_utc_timestamp == clock_utf_start.timestamp()
+        @staticmethod
+        @pytest.mark.parametrize(
+            "clock_step,expected",
+            [
+                (1, datetime.timedelta(seconds=1)),
+                (2, datetime.timedelta(seconds=2)),
+                (3, datetime.timedelta(seconds=3)),
+                (4, datetime.timedelta(seconds=4)),
+            ],
+        )
+        def test_int_step(clock, expected):
+            assert clock.step == expected
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            "clock_step",
+            [
+                datetime.timedelta(seconds=1),
+                datetime.timedelta(seconds=2),
+                datetime.timedelta(seconds=3),
+                datetime.timedelta(seconds=4),
+            ],
+        )
+        def test_timedelta_step(clock, clock_step):
+            assert clock.step is clock_step
+
+        def test_current_timestamp(self, clock, clock_start, clock_local_tz):
+            assert clock.current_timestamp == clock_start.timestamp()
+            clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
+            assert clock.current_tz_timestamp == clock_tz_start.timestamp()
+            clock_utf_start = clock_tz_start.astimezone(datetime.timezone.utc)
+            assert clock.current_utc_timestamp == clock_utf_start.timestamp()
+
+        def test_local_tz(self, clock, clock_local_tz):
+            assert clock.local_tz is clock_local_tz
 
     @staticmethod
     @pytest.mark.parametrize("steps", range(3))
