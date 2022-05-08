@@ -2,8 +2,6 @@ import contextlib
 import datetime
 import functools
 import time
-from typing import Callable
-from typing import Iterator
 from typing import Union
 
 ClockStep = Union[int, datetime.timedelta]
@@ -117,7 +115,7 @@ class Clock:
 
 
 @contextlib.contextmanager
-def installed(clock: Clock) -> Iterator[tuple[Clock, Callable[[], float]]]:
+def installed(clock: Clock):
     original_time = time.time
     try:
         time.time = clock.next_timestamp
