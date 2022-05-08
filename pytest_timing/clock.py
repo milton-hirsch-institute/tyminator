@@ -19,21 +19,21 @@ def as_timedelta(step: ClockStep) -> datetime.timedelta:
 class Clock:
 
     __current_datetime: datetime.datetime
-    __epoch: datetime.datetime
-    __epoch_utc: datetime.datetime
+    __start: datetime.datetime
+    __utc_start: datetime.datetime
     __local_tz: datetime.tzinfo
     __step: datetime.timedelta
 
     def __init__(
         self,
-        epoch: datetime.datetime,
+        start: datetime.datetime,
         step: ClockStep = 1,
         *,
         local_tz: datetime.tzinfo = datetime.timezone.utc,
     ):
-        if epoch.tzinfo is not None:
-            raise ValueError("Epoch may not have tzinfo")
-        self.__epoch = self.__current_datetime = epoch
+        if start.tzinfo is not None:
+            raise ValueError("start may not have tzinfo")
+        self.__start = self.__current_datetime = start
         self.__local_tz = local_tz
 
         self.__step = as_timedelta(step)
@@ -64,19 +64,19 @@ class Clock:
 
     @property
     def elapsed_time(self) -> datetime.timedelta:
-        return self.current_tz_datetime - self.tz_epoch
+        return self.current_tz_datetime - self.tz_start
 
     @property
-    def epoch(self) -> datetime.datetime:
-        return self.__epoch
+    def start(self) -> datetime.datetime:
+        return self.__start
 
     @functools.cached_property
-    def tz_epoch(self) -> datetime.datetime:
-        return self.__epoch.replace(tzinfo=self.__local_tz)
+    def tz_start(self) -> datetime.datetime:
+        return self.__start.replace(tzinfo=self.__local_tz)
 
     @functools.cached_property
-    def utc_epoch(self) -> datetime.datetime:
-        return self.tz_epoch.astimezone(datetime.timezone.utc)
+    def utc_start(self) -> datetime.datetime:
+        return self.tz_start.astimezone(datetime.timezone.utc)
 
     @property
     def step(self) -> datetime.timedelta:

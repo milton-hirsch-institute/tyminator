@@ -7,13 +7,13 @@ from pytest_timing import defaults
 
 
 @pytest.fixture
-def clock(clock_epoch, clock_step, clock_local_tz) -> clock_module.Clock:
-    return clock_module.Clock(clock_epoch, clock_step, local_tz=clock_local_tz)
+def clock(clock_start, clock_step, clock_local_tz) -> clock_module.Clock:
+    return clock_module.Clock(clock_start, clock_step, local_tz=clock_local_tz)
 
 
 @pytest.fixture
-def clock_epoch() -> datetime.datetime:
-    return defaults.DEFAULT_EPOCH
+def clock_start() -> datetime.datetime:
+    return defaults.DEFAULT_CLOCK_START
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def clock_step() -> clock_module.ClockStep:
 
 __all__ = (
     "clock",
-    "clock_epoch",
     "clock_local_tz",
+    "clock_start",
     "clock_step",
 )

@@ -28,26 +28,26 @@ class TestAsTimedelta:
 
 class TestConstructor:
     @staticmethod
-    def test_tz_epoch(clock_epoch, clock_local_tz):
-        tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
-        with pytest.raises(ValueError, match=r"^Epoch may not have tzinfo$"):
-            clock_module.Clock(tz_epoch, clock_local_tz)
+    def test_tz_start(clock_start, clock_local_tz):
+        tz_start = clock_start.replace(tzinfo=clock_local_tz)
+        with pytest.raises(ValueError, match=r"^start may not have tzinfo$"):
+            clock_module.Clock(tz_start, clock_local_tz)
 
     @staticmethod
-    def test_epoch(clock, clock_epoch, clock_local_tz):
-        assert clock.epoch == clock_epoch
-        clock_tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
-        assert clock.tz_epoch == clock_tz_epoch
-        clock_utc_epoch = clock_tz_epoch.astimezone(datetime.timezone.utc)
-        assert clock.utc_epoch == clock_utc_epoch
+    def test_start(clock, clock_start, clock_local_tz):
+        assert clock.start == clock_start
+        clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
+        assert clock.tz_start == clock_tz_start
+        clock_utc_start = clock_tz_start.astimezone(datetime.timezone.utc)
+        assert clock.utc_start == clock_utc_start
 
     @staticmethod
-    def test_current_datetime(clock, clock_epoch, clock_step):
-        assert clock.current_datetime == clock_epoch
+    def test_current_datetime(clock, clock_start, clock_step):
+        assert clock.current_datetime == clock_start
 
     @staticmethod
-    def test_current_tz_datetime(clock, clock_epoch, clock_local_tz):
-        expected = clock_epoch.replace(tzinfo=clock_local_tz)
+    def test_current_tz_datetime(clock, clock_start, clock_local_tz):
+        expected = clock_start.replace(tzinfo=clock_local_tz)
         assert clock.current_tz_datetime == expected
 
     @staticmethod
@@ -63,12 +63,12 @@ class TestConstructor:
     def test_int_step(clock, expected):
         assert clock.step == expected
 
-    def test_current_timestamp(self, clock, clock_epoch, clock_local_tz):
-        assert clock.current_timestamp == clock_epoch.timestamp()
-        clock_tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
-        assert clock.current_tz_timestamp == clock_tz_epoch.timestamp()
-        clock_utf_epoch = clock_tz_epoch.astimezone(datetime.timezone.utc)
-        assert clock.current_utc_timestamp == clock_utf_epoch.timestamp()
+    def test_current_timestamp(self, clock, clock_start, clock_local_tz):
+        assert clock.current_timestamp == clock_start.timestamp()
+        clock_tz_start = clock_start.replace(tzinfo=clock_local_tz)
+        assert clock.current_tz_timestamp == clock_tz_start.timestamp()
+        clock_utf_start = clock_tz_start.astimezone(datetime.timezone.utc)
+        assert clock.current_utc_timestamp == clock_utf_start.timestamp()
 
     @staticmethod
     @pytest.mark.parametrize("steps", range(3))
@@ -82,8 +82,8 @@ class TestConstructor:
         assert clock.elapsed_time == clock_step * steps
 
     @staticmethod
-    def test_current_utc_datetime(clock, clock_epoch, clock_local_tz):
-        expected = clock_epoch.replace(tzinfo=clock_local_tz)
+    def test_current_utc_datetime(clock, clock_start, clock_local_tz):
+        expected = clock_start.replace(tzinfo=clock_local_tz)
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
 
@@ -98,40 +98,40 @@ class TestConstructor:
         @pytest.mark.parametrize("steps", range(1, 5))
         def test_valid_steps(clock, steps):
             clock.elapse(steps)
-            assert clock.current_tz_datetime == clock.tz_epoch + (clock.step * steps)
+            assert clock.current_tz_datetime == clock.tz_start + (clock.step * steps)
 
     @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
     class TestNextDatetime:
         @staticmethod
-        def test_datetime(clock, clock_epoch):
+        def test_datetime(clock, clock_start):
             for step in range(4):
                 next_datetime = clock.next_datetime()
-                assert next_datetime == clock_epoch + (clock.step * step)
+                assert next_datetime == clock_start + (clock.step * step)
                 assert next_datetime == clock.current_datetime - clock.step
 
         @staticmethod
-        def test_tz_datetime(clock, clock_epoch):
+        def test_tz_datetime(clock, clock_start):
             for step in range(4):
                 next_tz_datetime = clock.next_tz_datetime()
                 assert next_tz_datetime == clock.current_tz_datetime - clock.step
 
         @staticmethod
-        def test_utc_datetime(clock, clock_epoch):
+        def test_utc_datetime(clock, clock_start):
             for step in range(4):
                 next_utc_datetime = clock.next_utc_datetime()
                 assert next_utc_datetime == clock.current_utc_datetime - clock.step
 
         @staticmethod
-        def test_timestamp(clock, clock_epoch):
+        def test_timestamp(clock, clock_start):
             for step in range(4):
                 next_timestamp = clock.next_timestamp()
-                assert next_timestamp == (clock_epoch + clock.step * step).timestamp()
+                assert next_timestamp == (clock_start + clock.step * step).timestamp()
                 assert (
                     next_timestamp == (clock.current_datetime - clock.step).timestamp()
                 )
 
         @staticmethod
-        def test_tz_timestamp(clock, clock_epoch):
+        def test_tz_timestamp(clock, clock_start):
             for step in range(4):
                 next_tz_timestamp = clock.next_tz_timestamp()
                 assert (
@@ -140,7 +140,7 @@ class TestConstructor:
                 )
 
         @staticmethod
-        def test_utc_timestamp(clock, clock_epoch):
+        def test_utc_timestamp(clock, clock_start):
             for step in range(4):
                 next_utc_timestamp = clock.next_utc_timestamp()
                 assert (
