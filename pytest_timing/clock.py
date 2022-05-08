@@ -88,8 +88,8 @@ class Clock:
             return dt
 
 
-__all__ = [
+__all__ = (
     "Clock",
     "ClockStep",
     "as_timedelta",
-]
+)
