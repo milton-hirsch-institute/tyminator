@@ -54,7 +54,7 @@ class Clock:
         return self.current_tz_datetime - self.epoch
 
     @property
-    def epoch(self):
+    def epoch(self) -> datetime.datetime:
         return self.__epoch
 
     @functools.cached_property
@@ -62,12 +62,17 @@ class Clock:
         return self.__epoch.astimezone(datetime.timezone.utc)
 
     @property
-    def step(self):
+    def step(self) -> datetime.timedelta:
         return self.__step
+
+    def elapse(self, steps: int) -> None:
+        if steps <= 0:
+            raise ValueError("steps must be positive integer")
+        self.__current_datetime = self.__current_datetime + self.step * steps
 
     def next_datetime(self) -> datetime.datetime:
         current_datetime = self.__current_datetime
-        self.__current_datetime = current_datetime + self.__step
+        self.elapse(1)
         return current_datetime
 
     def next_tz_datetime(self) -> datetime.datetime:

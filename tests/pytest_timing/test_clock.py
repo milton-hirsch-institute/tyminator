@@ -8,7 +8,7 @@ from tests.pytest_timing import const
 
 class TestAsTimedelta:
     @staticmethod
-    @pytest.mark.parametrize("int_step", range(-4, 0))
+    @pytest.mark.parametrize("int_step", range(-4, 1))
     def test_invalid_int(int_step):
         with pytest.raises(ValueError, match=r"^step must be positive integer$"):
             clock_module.as_timedelta(int_step)
@@ -72,6 +72,19 @@ class TestConstructor:
         expected = clock_epoch.replace(tzinfo=clock_local_tz)
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
+
+    class TestElapse:
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(-4, 1))
+        def test_invalid_steps(clock, steps):
+            with pytest.raises(ValueError, match="^steps must be positive integer$"):
+                clock.elapse(steps)
+
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(1, 5))
+        def test_valid_steps(clock, steps):
+            clock.elapse(steps)
+            assert clock.current_tz_datetime == clock.epoch + (clock.step * steps)
 
     @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
     class TestNextDatetime:
