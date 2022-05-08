@@ -5,84 +5,110 @@ import pytest
 from pytest_timing import clock as clock_module
 
 
-class TestConstructor:
+class TestAsTimedelta:
     @staticmethod
-    def test_no_tz_epoch(clock, clock_epoch, clock_local_tz):
-        tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
-        assert clock.epoch == tz_epoch
-        assert clock.utc_epoch == tz_epoch
+    @pytest.mark.parametrize("int_step", range(-4, 1))
+    def test_invalid_int(int_step):
+        with pytest.raises(ValueError, match=r"^step must be positive integer$"):
+            clock_module.as_timedelta(int_step)
 
+    @staticmethod
+    @pytest.mark.parametrize("int_step", range(1, 5))
+    def test_int(int_step):
+        expected = datetime.timedelta(seconds=int_step)
+        assert clock_module.as_timedelta(int_step) == expected
+
+    @staticmethod
+    @pytest.mark.parametrize("int_step", range(1, 5))
+    def test_timedelta(int_step):
+        expected = datetime.timedelta(seconds=int_step)
+        assert clock_module.as_timedelta(expected) is expected
+
+
+class TestConstructor:
     @staticmethod
     def test_tz_epoch(clock_epoch, clock_local_tz):
         tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
-        new_clock = clock_module.Clock(tz_epoch, local_tz=clock_local_tz)
-        assert new_clock.epoch == tz_epoch
-        assert new_clock.utc_epoch == tz_epoch
+        with pytest.raises(ValueError, match=r"^Epoch may not have tzinfo$"):
+            clock_module.Clock(tz_epoch, clock_local_tz)
 
     @staticmethod
-    @pytest.mark.parametrize(
-        "clock_epoch",
-        [
-            datetime.datetime(2014, 7, 28, 14, 30),
-            datetime.datetime(
-                2014,
-                7,
-                28,
-                14,
-                30,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=2)),
-            ),
-        ],
-    )
-    def test_current_datetime(clock, clock_epoch):
+    def test_epoch(clock, clock_epoch, clock_local_tz):
+        assert clock.epoch == clock_epoch
+        clock_tz_epoch = clock_epoch.replace(tzinfo=clock_local_tz)
+        assert clock.tz_epoch == clock_tz_epoch
+        clock_utc_epoch = clock_tz_epoch.astimezone(datetime.timezone.utc)
+        assert clock.utc_epoch == clock_utc_epoch
+
+    @staticmethod
+    def test_current_datetime(clock, clock_epoch, clock_step):
         assert clock.current_datetime == clock_epoch
 
     @staticmethod
-    @pytest.mark.parametrize(
-        "clock_epoch",
-        [
-            datetime.datetime(2014, 7, 28, 14, 30),
-            datetime.datetime(
-                2014,
-                7,
-                28,
-                14,
-                30,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=2)),
-            ),
-        ],
-    )
-    def test_tz_current_datetime(clock, clock_epoch, clock_local_tz):
+    def test_current_tz_datetime(clock, clock_epoch, clock_local_tz):
         expected = clock_epoch.replace(tzinfo=clock_local_tz)
-        assert clock.tz_current_datetime == expected
+        assert clock.current_tz_datetime == expected
 
     @staticmethod
     @pytest.mark.parametrize(
-        "clock_epoch,expected",
+        "clock_step,expected",
         [
-            (
-                datetime.datetime(2014, 7, 28, 14, 30),
-                datetime.datetime(2014, 7, 28, 12, 30, tzinfo=datetime.timezone.utc),
-            ),
-            (
-                datetime.datetime(
-                    2014,
-                    7,
-                    28,
-                    14,
-                    30,
-                    tzinfo=datetime.timezone(datetime.timedelta(hours=-5)),
-                ),
-                datetime.datetime(
-                    2014,
-                    7,
-                    28,
-                    19,
-                    30,
-                    tzinfo=datetime.timezone.utc,
-                ),
-            ),
+            (1, datetime.timedelta(seconds=1)),
+            (2, datetime.timedelta(seconds=2)),
+            (3, datetime.timedelta(seconds=3)),
+            (4, datetime.timedelta(seconds=4)),
         ],
     )
-    def test_utc_current_datetime(clock, clock_epoch, expected):
-        assert clock.utc_current_datetime == expected
+    def test_int_step(clock, expected):
+        assert clock.step == expected
+
+    @staticmethod
+    @pytest.mark.parametrize("steps", range(3))
+    @pytest.mark.parametrize(
+        "clock_step", [datetime.timedelta(seconds=1), datetime.timedelta(minutes=2)]
+    )
+    def test_elapsed(clock, steps, clock_step):
+        for _ in range(steps):
+            clock.next_datetime()
+
+        assert clock.elapsed_time == clock_step * steps
+
+    @staticmethod
+    def test_current_utc_datetime(clock, clock_epoch, clock_local_tz):
+        expected = clock_epoch.replace(tzinfo=clock_local_tz)
+        expected = expected.astimezone(datetime.timezone.utc)
+        assert clock.current_utc_datetime == expected
+
+    class TestElapse:
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(-4, 1))
+        def test_invalid_steps(clock, steps):
+            with pytest.raises(ValueError, match="^steps must be positive integer$"):
+                clock.elapse(steps)
+
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(1, 5))
+        def test_valid_steps(clock, steps):
+            clock.elapse(steps)
+            assert clock.current_datetime == clock.epoch + (clock.step * steps)
+
+    @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
+    class TestNextDatetime:
+        @staticmethod
+        def test_datetime(clock, clock_epoch):
+            for step in range(4):
+                next_datetime = clock.next_datetime()
+                assert next_datetime == clock_epoch + (clock.step * step)
+                assert next_datetime == clock.current_datetime - clock.step
+
+        @staticmethod
+        def test_tz_datetime(clock, clock_epoch):
+            for step in range(4):
+                next_tz_datetime = clock.next_tz_datetime()
+                assert next_tz_datetime == clock.current_tz_datetime - clock.step
+
+        @staticmethod
+        def test_utc_datetime(clock, clock_epoch):
+            for step in range(4):
+                next_utc_datetime = clock.next_utc_datetime()
+                assert next_utc_datetime == clock.current_utc_datetime - clock.step

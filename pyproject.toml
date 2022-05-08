@@ -9,6 +9,9 @@ packages = [
     {include = "pytest_timing", from = "."}
 ]
 
+[tool.poetry.plugins."pytest11"]
+"timing" = "pytest_timing.plugin"
+
 [tool.poetry.dependencies]
 python = "^3.9"
 pytest = "^7.1"
