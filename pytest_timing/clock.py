@@ -5,6 +5,15 @@ from typing import Union
 ClockStep = Union[int, datetime.timedelta]
 
 
+def as_timedelta(step: ClockStep) -> datetime.timedelta:
+    if isinstance(step, int):
+        if step <= 0:
+            raise ValueError("step must be positive integer")
+        return datetime.timedelta(seconds=step)
+    else:
+        return step
+
+
 class Clock:
 
     __current_datetime: datetime.datetime
@@ -26,9 +35,7 @@ class Clock:
         self.__epoch = epoch
         self.__local_tz = local_tz
 
-        if isinstance(step, int):
-            step = datetime.timedelta(seconds=step)
-        self.__step = step
+        self.__step = as_timedelta(step)
 
     @property
     def current_datetime(self) -> datetime.datetime:
@@ -78,4 +85,6 @@ class Clock:
 
 __all__ = [
     "Clock",
+    "ClockStep",
+    "as_timedelta",
 ]

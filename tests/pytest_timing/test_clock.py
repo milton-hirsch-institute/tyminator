@@ -2,7 +2,28 @@ import datetime
 
 import pytest
 
+from pytest_timing import clock as clock_module
 from tests.pytest_timing import const
+
+
+class TestAsTimedelta:
+    @staticmethod
+    @pytest.mark.parametrize("int_step", range(-4, 0))
+    def test_invalid_int(int_step):
+        with pytest.raises(ValueError, match=r"^step must be positive integer$"):
+            clock_module.as_timedelta(int_step)
+
+    @staticmethod
+    @pytest.mark.parametrize("int_step", range(1, 5))
+    def test_int(int_step):
+        expected = datetime.timedelta(seconds=int_step)
+        assert clock_module.as_timedelta(int_step) == expected
+
+    @staticmethod
+    @pytest.mark.parametrize("int_step", range(1, 5))
+    def test_timedelta(int_step):
+        expected = datetime.timedelta(seconds=int_step)
+        assert clock_module.as_timedelta(expected) is expected
 
 
 @pytest.mark.parametrize("clock_epoch", const.DEFAULT_EPOCHS)
