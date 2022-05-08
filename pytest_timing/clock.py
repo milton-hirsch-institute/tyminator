@@ -1,5 +1,9 @@
+import contextlib
 import datetime
 import functools
+import time
+from typing import Callable
+from typing import Iterator
 from typing import Union
 
 ClockStep = Union[int, datetime.timedelta]
@@ -50,6 +54,18 @@ class Clock:
         return self.current_tz_datetime.astimezone(datetime.timezone.utc)
 
     @property
+    def current_timestamp(self) -> float:
+        return self.__current_datetime.timestamp()
+
+    @property
+    def current_tz_timestamp(self) -> float:
+        return self.current_tz_datetime.timestamp()
+
+    @property
+    def current_utc_timestamp(self) -> float:
+        return self.current_utc_datetime.timestamp()
+
+    @property
     def elapsed_time(self) -> datetime.timedelta:
         return self.current_tz_datetime - self.epoch
 
@@ -81,6 +97,18 @@ class Clock:
     def next_utc_datetime(self) -> datetime.datetime:
         return self.next_tz_datetime().astimezone(datetime.timezone.utc)
 
+    def next_timestamp(self) -> float:
+        self.next_datetime()
+        return self.current_timestamp
+
+    def next_tz_timestamp(self) -> float:
+        self.next_datetime()
+        return self.current_tz_timestamp
+
+    def next_utc_timestamp(self) -> float:
+        self.next_datetime()
+        return self.current_utc_timestamp
+
     def __to_tz_datetime(self, dt: datetime.datetime):
         if dt.tzinfo is None:
             return dt.replace(tzinfo=self.__local_tz)
@@ -88,8 +116,19 @@ class Clock:
             return dt
 
 
+@contextlib.contextmanager
+def installed(clock: Clock) -> Iterator[tuple[Clock, Callable[[], float]]]:
+    original_time = time.time
+    try:
+        time.time = clock.next_timestamp
+        yield clock, original_time
+    finally:
+        time.time = original_time
+
+
 __all__ = (
     "Clock",
     "ClockStep",
     "as_timedelta",
+    "installed",
 )
