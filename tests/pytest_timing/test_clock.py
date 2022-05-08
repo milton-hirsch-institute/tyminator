@@ -171,6 +171,24 @@ class TestClock:
                     == (clock.current_utc_datetime - clock.step).timestamp()
                 )
 
+        @staticmethod
+        def test_dt_at_step(clock):
+            for step in range(-3, 4):
+                dt_at_step = clock.dt_at_step(step)
+                assert dt_at_step == clock.start + (clock.step * step)
+
+        @staticmethod
+        def test_dt_tz_at_step(clock):
+            for step in range(-3, 4):
+                tz_dt_at_step = clock.tz_dt_at_step(step)
+                assert tz_dt_at_step == clock.tz_start + (clock.step * step)
+
+        @staticmethod
+        def test_dt_utc_at_step(clock):
+            for step in range(-3, 4):
+                utc_dt_at_step = clock.utc_dt_at_step(step)
+                assert utc_dt_at_step == clock.utc_start + (clock.step * step)
+
 
 def test_time_function(clock):
     original_time = time.time

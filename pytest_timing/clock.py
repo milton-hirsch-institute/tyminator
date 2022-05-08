@@ -117,6 +117,15 @@ class Clock:
         self.next_datetime()
         return current_utc_timestamp
 
+    def dt_at_step(self, step: int) -> datetime.datetime:
+        return self.__start + self.__step * step
+
+    def tz_dt_at_step(self, step: int) -> datetime.datetime:
+        return self.dt_at_step(step).replace(tzinfo=self.__local_tz)
+
+    def utc_dt_at_step(self, step: int) -> datetime.datetime:
+        return self.tz_dt_at_step(step).astimezone(datetime.timezone.utc)
+
 
 @contextlib.contextmanager
 def installed(clock: Clock):
