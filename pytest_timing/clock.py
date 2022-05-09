@@ -1,10 +1,15 @@
 import contextlib
+import dataclasses
 import datetime
 import functools
+import operator
 import time
+from typing import Callable
 from typing import Union
+from typing import cast
 
 ClockStep = Union[int, datetime.timedelta]
+Action = Callable[["Clock"], None]
 
 
 class LockError(Exception):
@@ -21,6 +26,12 @@ def as_timedelta(step: ClockStep) -> datetime.timedelta:
 
 
 class Clock:
+    @dataclasses.dataclass(frozen=True)
+    class __Event:
+        when: datetime.datetime
+        action: Action
+
+        SORT_KEY = operator.attrgetter("when", "action")
 
     __current_datetime: datetime.datetime
     __start: datetime.datetime
@@ -28,6 +39,7 @@ class Clock:
     __local_tz: datetime.tzinfo
     __step: datetime.timedelta
     __is_locked: bool = False
+    __event_queue: list[__Event] = cast(list[__Event], [])
 
     def __init__(
         self,
@@ -95,14 +107,21 @@ class Clock:
     def is_locked(self) -> bool:
         return self.__is_locked
 
-    def elapse(self, steps: int) -> None:
+    def __run_pending_events(self, until: datetime.datetime):
+        while self.__event_queue and (event := self.__event_queue[0]).when <= until:
+            self.__current_datetime = event.when
+            del self.__event_queue[0]
+            event.action(self)
+
+    def elapse(self, steps: int = 1) -> None:
         if steps <= 0:
             raise ValueError("steps must be positive integer")
-        self.__current_datetime = self.__current_datetime + self.step * steps
+        with self.lock():
+            next_datetime = self.__current_datetime + self.step * steps
+            self.__run_pending_events(next_datetime)
+            self.__current_datetime = next_datetime
 
     def next_datetime(self) -> datetime.datetime:
-        if self.__is_locked:
-            raise LockError("clock is locked")
         current_datetime = self.__current_datetime
         self.elapse(1)
         return current_datetime
@@ -120,8 +139,6 @@ class Clock:
             return self.current_timestamp
 
     def next_timestamp(self) -> float:
-        if self.__is_locked:
-            ...
         current_timestamp = self.current_timestamp
         self.next_datetime()
         return current_timestamp
@@ -145,6 +162,14 @@ class Clock:
     def utc_dt_at_step(self, step: int) -> datetime.datetime:
         return self.tz_dt_at_step(step).astimezone(datetime.timezone.utc)
 
+    def run_in_steps(self, action: Action, steps: int):
+        if steps < 0:
+            raise ValueError("steps must be positive integer")
+        when = self.current_datetime + (self.__step * steps)
+        event = self.__Event(when=when, action=action)
+        self.__event_queue.append(event)
+        self.__event_queue.sort(key=self.__Event.SORT_KEY)
+
     @contextlib.contextmanager
     def lock(self):
         if self.__is_locked:
@@ -167,6 +192,7 @@ def installed(clock: Clock):
 
 
 __all__ = (
+    "Action",
     "Clock",
     "ClockStep",
     "LockError",

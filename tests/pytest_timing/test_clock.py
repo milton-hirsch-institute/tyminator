@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 import time
 
@@ -112,6 +113,13 @@ class TestClock:
 
     class TestElapse:
         @staticmethod
+        def test_locked(clock):
+            with clock.lock():
+                with pytest.raises(clock_module.LockError, match="^already locked$"):
+                    clock.elapse()
+                assert clock.current_datetime == clock.start
+
+        @staticmethod
         @pytest.mark.parametrize("steps", range(-4, 1))
         def test_invalid_steps(clock, steps):
             with pytest.raises(ValueError, match="^steps must be positive integer$"):
@@ -131,13 +139,6 @@ class TestClock:
                 next_datetime = clock.next_datetime()
                 assert next_datetime == clock_start + (clock.step * step)
                 assert next_datetime == clock.current_datetime - clock.step
-
-        @staticmethod
-        def test_datetime_locked(clock):
-            with clock.lock():
-                with pytest.raises(clock_module.LockError, match="^clock is locked$"):
-                    clock.next_datetime()
-                assert clock.current_datetime == clock.start
 
         @staticmethod
         def test_tz_datetime(clock, clock_start):
@@ -217,21 +218,67 @@ class TestClock:
                 utc_dt_at_step = clock.utc_dt_at_step(step)
                 assert utc_dt_at_step == clock.utc_start + (clock.step * step)
 
+    class TestRunInSteps:
+        @dataclasses.dataclass(frozen=True)
+        class CallCollector:
+            clock: clock_module.Clock
+            calls: list[datetime.datetime] = dataclasses.field(default_factory=list)
 
-class TestClockLock:
-    @staticmethod
-    def test_is_locked(clock):
-        assert not clock.is_locked
-        with clock.lock():
-            assert clock.is_locked
-        assert not clock.is_locked
+            def __call__(self, clock: clock_module.Clock):
+                assert clock is self.clock
+                self.calls.append(clock.current_datetime)
 
-    @staticmethod
-    def test_nested_lock(clock):
-        with clock.lock():
-            with pytest.raises(clock_module.LockError, match=r"^already locked$"):
-                with clock.lock():
-                    pytest.fail("nested locks not supported")
+        @staticmethod
+        @pytest.fixture
+        def call_collector(clock) -> CallCollector:
+            return TestClock.TestRunInSteps.CallCollector(clock)
+
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(-5, 0))
+        def test_negative_steps(clock, steps, call_collector):
+            with pytest.raises(ValueError, match=r"^steps must be positive integer$"):
+                clock.run_in_steps(call_collector, steps)
+
+        @staticmethod
+        def test_run_at_beginning(clock, call_collector):
+            clock.run_in_steps(call_collector, 0)
+            clock.elapse()
+            assert call_collector.calls == [clock.start]
+
+        @staticmethod
+        def test_run_at_end(clock, call_collector):
+            clock.run_in_steps(call_collector, 1)
+            clock.elapse()
+            assert call_collector.calls == [clock.start + clock.step]
+
+        @staticmethod
+        def test_run_all(clock, call_collector):
+            clock.run_in_steps(call_collector, 1)
+            clock.run_in_steps(call_collector, 2)
+            clock.run_in_steps(call_collector, 2)
+            clock.run_in_steps(call_collector, 3)
+            clock.elapse(3)
+            assert call_collector.calls == [
+                clock.start + clock.step,
+                clock.start + clock.step * 2,
+                clock.start + clock.step * 2,
+                clock.start + clock.step * 3,
+            ]
+
+    class TestLock:
+        @staticmethod
+        def test_is_locked(clock):
+            assert not clock.is_locked
+            with clock.lock():
+                assert clock.is_locked
+            assert not clock.is_locked
+
+        @staticmethod
+        def test_nested_lock(clock):
+            with clock.lock():
+                with pytest.raises(clock_module.LockError, match=r"^already locked$"):
+                    with clock.lock():
+                        pytest.fail("nested locks not supported")
 
 
 def test_install(clock):
