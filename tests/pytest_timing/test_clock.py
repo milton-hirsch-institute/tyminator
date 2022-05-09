@@ -265,6 +265,24 @@ class TestClock:
                 clock.start + clock.step * 3,
             ]
 
+    @staticmethod
+    def test_mark(clock):
+        mark1 = clock.mark()
+        clock.elapse()
+        mark2 = clock.mark()
+
+        assert mark1.clock is clock
+        assert mark2.clock is clock
+
+        assert mark1.datetime == clock.start
+        assert mark2.datetime == clock.current_datetime
+
+        assert mark1.tz_datetime == clock.tz_start
+        assert mark2.tz_datetime == clock.current_tz_datetime
+
+        assert mark1.utc_datetime == clock.utc_start
+        assert mark2.utc_datetime == clock.current_utc_datetime
+
     class TestLock:
         @staticmethod
         def test_is_locked(clock):

@@ -170,6 +170,9 @@ class Clock:
         self.__event_queue.append(event)
         self.__event_queue.sort(key=self.__Event.SORT_KEY)
 
+    def mark(self) -> "Mark":
+        return Mark(self, self.current_datetime)
+
     @contextlib.contextmanager
     def lock(self):
         if self.__is_locked:
@@ -179,6 +182,21 @@ class Clock:
             yield
         finally:
             del self.__is_locked
+
+
+@dataclasses.dataclass(frozen=True)
+class Mark:
+
+    clock: Clock
+    datetime: datetime.datetime
+
+    @property
+    def tz_datetime(self):
+        return self.datetime.replace(tzinfo=self.clock.local_tz)
+
+    @property
+    def utc_datetime(self):
+        return self.tz_datetime.astimezone(datetime.timezone.utc)
 
 
 @contextlib.contextmanager
@@ -195,6 +213,7 @@ __all__ = (
     "Action",
     "Clock",
     "LockError",
+    "Mark",
     "Step",
     "as_timedelta",
     "installed",
