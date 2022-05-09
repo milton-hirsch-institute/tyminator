@@ -5,6 +5,7 @@ import time
 import pytest
 
 from pytest_timing import clock as clock_module
+from pytest_timing import defaults
 
 
 class TestAsTimedelta:
@@ -274,14 +275,14 @@ class TestClock:
         assert mark1.clock is clock
         assert mark2.clock is clock
 
-        assert mark1.datetime == clock.start
-        assert mark2.datetime == clock.current_datetime
+        assert mark1.when == clock.start
+        assert mark2.when == clock.current_datetime
 
-        assert mark1.tz_datetime == clock.tz_start
-        assert mark2.tz_datetime == clock.current_tz_datetime
+        assert mark1.tz_when == clock.tz_start
+        assert mark2.tz_when == clock.current_tz_datetime
 
-        assert mark1.utc_datetime == clock.utc_start
-        assert mark2.utc_datetime == clock.current_utc_datetime
+        assert mark1.utc_when == clock.utc_start
+        assert mark2.utc_when == clock.current_utc_datetime
 
     class TestLock:
         @staticmethod
@@ -301,6 +302,12 @@ class TestClock:
 
 class TestMark:
     class TestSorting:
+        @staticmethod
+        @pytest.mark.parametrize("value", [None, 2.0, defaults.DEFAULT_CLOCK_START, 6])
+        def test_unsupported(clock, value):
+            with pytest.raises(TypeError):
+                clock.mark() < value
+
         @staticmethod
         def test_different_clocks(clock_start, clock_local_tz):
             m1 = clock_module.Clock(clock_start).mark()
@@ -342,6 +349,30 @@ class TestMark:
             m5 = clock.mark()
             unordered = [m2, m4, m1, m5, m3]
             assert sorted(unordered) == [m1, m2, m3, m4, m5]
+
+    class TestAdd:
+        @staticmethod
+        @pytest.fixture
+        def mark(clock):
+            clock.elapse()
+            return clock.mark()
+
+        @staticmethod
+        @pytest.mark.parametrize("value", [None, 2.0, defaults.DEFAULT_CLOCK_START])
+        def test_unsupported(mark, value):
+            with pytest.raises(TypeError):
+                mark + value
+
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(-4, 5))
+        def test_int(mark, steps):
+            assert mark + steps == mark.when + mark.clock.step * steps
+
+        @staticmethod
+        @pytest.mark.parametrize("seconds", range(5))
+        def test_timedelta(mark, seconds):
+            td = datetime.timedelta(seconds=seconds)
+            assert mark + td == mark.when + td
 
 
 def test_install(clock):

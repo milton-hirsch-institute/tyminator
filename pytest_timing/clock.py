@@ -192,22 +192,31 @@ class Clock:
 class Mark:
 
     clock: Clock
-    datetime: datetime.datetime
+    when: datetime.datetime
     seq: int
 
     @property
-    def tz_datetime(self):
-        return self.datetime.replace(tzinfo=self.clock.local_tz)
+    def tz_when(self) -> datetime.datetime:
+        return self.when.replace(tzinfo=self.clock.local_tz)
 
     @property
-    def utc_datetime(self):
-        return self.tz_datetime.astimezone(datetime.timezone.utc)
+    def utc_when(self) -> datetime.datetime:
+        return self.tz_when.astimezone(datetime.timezone.utc)
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if isinstance(other, Mark) and self.clock is other.clock:
-            return (self.datetime, self.seq) < (other.datetime, other.seq)
+            return (self.when, self.seq) < (other.when, other.seq)
         else:
             return NotImplemented
+
+    def __add__(self, other) -> bool:
+        if isinstance(other, int):
+            other = self.clock.step * other
+
+        if isinstance(other, datetime.timedelta):
+            return self.when + other
+
+        return NotImplemented
 
 
 @contextlib.contextmanager
