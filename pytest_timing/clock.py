@@ -8,7 +8,7 @@ from typing import Callable
 from typing import Union
 from typing import cast
 
-ClockStep = Union[int, datetime.timedelta]
+Step = Union[int, datetime.timedelta]
 Action = Callable[["Clock"], None]
 
 
@@ -16,7 +16,7 @@ class LockError(Exception):
     """Raised when trying to take a step when clock not ready."""
 
 
-def as_timedelta(step: ClockStep) -> datetime.timedelta:
+def as_timedelta(step: Step) -> datetime.timedelta:
     if isinstance(step, int):
         if step <= 0:
             raise ValueError("step must be positive integer")
@@ -44,7 +44,7 @@ class Clock:
     def __init__(
         self,
         start: datetime.datetime,
-        step: ClockStep = 1,
+        step: Step = 1,
         *,
         local_tz: datetime.tzinfo = datetime.timezone.utc,
     ):
@@ -194,8 +194,8 @@ def installed(clock: Clock):
 __all__ = (
     "Action",
     "Clock",
-    "ClockStep",
     "LockError",
+    "Step",
     "as_timedelta",
     "installed",
 )

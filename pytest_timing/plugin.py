@@ -22,7 +22,7 @@ def clock_local_tz() -> datetime.tzinfo:
 
 
 @pytest.fixture
-def clock_step() -> clock_module.ClockStep:
+def clock_step() -> clock_module.Step:
     return 1
 
 
