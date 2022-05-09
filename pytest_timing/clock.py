@@ -26,7 +26,7 @@ def as_timedelta(step: Step) -> datetime.timedelta:
 
 
 class Clock:
-    @dataclasses.dataclass(frozen=True)
+    @dataclasses.dataclass(frozen=True, eq=False)
     class __Event:
         when: datetime.datetime
         action: Action
@@ -40,6 +40,7 @@ class Clock:
     __step: datetime.timedelta
     __is_locked: bool = False
     __event_queue: list[__Event] = cast(list[__Event], [])
+    __mark_seq: int = 0
 
     def __init__(
         self,
@@ -171,7 +172,9 @@ class Clock:
         self.__event_queue.sort(key=self.__Event.SORT_KEY)
 
     def mark(self) -> "Mark":
-        return Mark(self, self.current_datetime)
+        mark = Mark(self, self.current_datetime, self.__mark_seq)
+        self.__mark_seq += 1
+        return mark
 
     @contextlib.contextmanager
     def lock(self):
@@ -185,10 +188,12 @@ class Clock:
 
 
 @dataclasses.dataclass(frozen=True)
+@functools.total_ordering
 class Mark:
 
     clock: Clock
     datetime: datetime.datetime
+    seq: int
 
     @property
     def tz_datetime(self):
@@ -197,6 +202,12 @@ class Mark:
     @property
     def utc_datetime(self):
         return self.tz_datetime.astimezone(datetime.timezone.utc)
+
+    def __lt__(self, other):
+        if isinstance(other, Mark) and self.clock is other.clock:
+            return (self.datetime, self.seq) < (other.datetime, other.seq)
+        else:
+            return NotImplemented
 
 
 @contextlib.contextmanager

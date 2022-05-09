@@ -299,6 +299,51 @@ class TestClock:
                         pytest.fail("nested locks not supported")
 
 
+class TestMark:
+    class TestSorting:
+        @staticmethod
+        def test_different_clocks(clock_start, clock_local_tz):
+            m1 = clock_module.Clock(clock_start).mark()
+            m2 = clock_module.Clock(clock_start).mark()
+
+            with pytest.raises(TypeError):
+                m1 < m2
+
+        @staticmethod
+        def test_same_datetime(clock):
+            m1 = clock_module.Mark(clock, clock.current_datetime, 0)
+            m2 = clock_module.Mark(clock, clock.current_datetime, 0)
+            assert not (m1 < m2)
+            assert not (m1 > m2)
+
+        @staticmethod
+        def test_same_datetime_from_clock(clock):
+            """Sequence number makes them different."""
+            m1 = clock.mark()
+            m2 = clock.mark()
+            assert m1 < m2
+
+        @staticmethod
+        def test_different_datetime(clock):
+            m1 = clock.mark()
+            clock.elapse()
+            m2 = clock.mark()
+            assert m1 < m2
+
+        @staticmethod
+        def test_general_sorting(clock):
+            m1 = clock.mark()
+            clock.elapse()
+            m2 = clock.mark()
+            clock.elapse()
+            m3 = clock.mark()
+            m4 = clock.mark()
+            clock.elapse()
+            m5 = clock.mark()
+            unordered = [m2, m4, m1, m5, m3]
+            assert sorted(unordered) == [m1, m2, m3, m4, m5]
+
+
 def test_install(clock):
     original_time = time.time
     with clock_module.installed(clock) as (c, time_func):
