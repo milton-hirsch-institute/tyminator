@@ -141,8 +141,8 @@ class Clock:
 
     async def async_elapse(self, change: Change) -> None:
         change = from_change(change)
-        if change <= _ZERO_TIMEDELTA:
-            raise ValueError("change must be positive")
+        if change < _ZERO_TIMEDELTA:
+            raise ValueError("change must be positive or zero")
 
         with self.lock():
             next_datetime = self.__current_datetime + change
@@ -185,6 +185,18 @@ class Clock:
         except (LockError, SyncOnlyError):
             pass
         return self.current_timestamp
+
+    def sleep_function(self, secs) -> None:
+        asyncio.run(self.async_sleep_function(secs))
+
+    async def async_sleep_function(self, delay, result=None, *, loop=None) -> Any:
+        if loop is not None:
+            raise NotImplementedError("loop parameter is unsupported")
+        if not isinstance(delay, (int, float)):
+            raise TypeError("must be int or float")
+        delay = float(delay)
+        await self.async_elapse(delay)
+        return result
 
     def next_timestamp(self) -> float:
         current_timestamp = self.current_timestamp

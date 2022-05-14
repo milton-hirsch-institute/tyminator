@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import datetime
 import time
@@ -161,14 +162,14 @@ class TestClock:
         @staticmethod
         @pytest.mark.parametrize(
             "change",
-            cast(list[clock_module.Change], list(range(-2, 1)))
+            cast(list[clock_module.Change], list(range(-3, 0)))
             + cast(
                 list[clock_module.Change],
-                [datetime.timedelta(seconds=s) for s in range(-2, 1)],
+                [datetime.timedelta(seconds=s) for s in range(-3, 0)],
             )
             + cast(
                 list[clock_module.Change],
-                [s * 0.5 for s in range(-2, 1)],
+                [s * 0.5 for s in range(-3, 0)],
             ),
         )
         async def test_negative_changes(clock, change):
@@ -178,8 +179,8 @@ class TestClock:
         @staticmethod
         @pytest.mark.parametrize(
             "change",
-            cast(list[clock_module.Change], list(range(1, 3)))
-            + cast(list[clock_module.Change], list(s * 0.5 for s in range(1, 3))),
+            cast(list[clock_module.Change], list(range(3)))
+            + cast(list[clock_module.Change], list(s * 0.5 for s in range(3))),
         )
         async def test_positive_number(clock, change):
             await clock.async_elapse(change)
@@ -239,33 +240,6 @@ class TestClock:
                 next_utc_datetime = clock.next_utc_datetime()
                 assert next_utc_datetime == clock.current_utc_datetime - clock.step
 
-        class TestTimeFunction:
-            @staticmethod
-            def test_unlocked(clock):
-                for step in range(4):
-                    next_timestamp = clock.time_function()
-                    assert (
-                        next_timestamp == (clock.start + clock.step * step).timestamp()
-                    )
-                    assert (
-                        next_timestamp
-                        == (clock.current_datetime - clock.step).timestamp()
-                    )
-
-            @staticmethod
-            def test_locked(clock):
-                with clock.lock():
-                    for step in range(4):
-                        next_timestamp = clock.time_function()
-                        assert next_timestamp == clock.start.timestamp()
-                        assert clock.current_timestamp == next_timestamp
-
-            @staticmethod
-            @pytest.mark.asyncio
-            async def test_async(clock, clock_step):
-                clock.time_function()
-                assert clock.current_datetime == clock.start
-
         @staticmethod
         def test_next_timestamp(clock, clock_start):
             for step in range(4):
@@ -310,6 +284,64 @@ class TestClock:
             for step in range(-3, 4):
                 utc_dt_at_step = clock.utc_dt_at_step(step)
                 assert utc_dt_at_step == clock.utc_start + (clock.step * step)
+
+    class TestTimeFunction:
+        @staticmethod
+        def test_unlocked(clock):
+            for step in range(4):
+                next_timestamp = clock.time_function()
+                assert next_timestamp == (clock.start + clock.step * step).timestamp()
+                assert (
+                    next_timestamp == (clock.current_datetime - clock.step).timestamp()
+                )
+
+        @staticmethod
+        def test_locked(clock):
+            with clock.lock():
+                for step in range(4):
+                    next_timestamp = clock.time_function()
+                    assert next_timestamp == clock.start.timestamp()
+                    assert clock.current_timestamp == next_timestamp
+
+        @staticmethod
+        @pytest.mark.asyncio
+        async def test_async(clock, clock_step):
+            clock.time_function()
+            assert clock.current_datetime == clock.start
+
+    @staticmethod
+    @pytest.mark.parametrize("secs", [0, 1, 2, 0.0, 0.1, 2.2])
+    def test_sleep_function(clock, secs):
+        clock.sleep_function(secs)
+        assert clock.current_datetime == clock.start + clock_module.from_change(secs)
+
+    @pytest.mark.asyncio
+    class TestAsyncSleepFunction:
+        @staticmethod
+        async def test_with_loop(clock):
+            loop = asyncio.new_event_loop()
+            with pytest.raises(
+                NotImplementedError, match=r"loop parameter is unsupported"
+            ):
+                await clock.async_sleep_function(1, loop=loop)
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            "bad_secs",
+            [None, "2", defaults.DEFAULT_CLOCK_START, datetime.timedelta(seconds=2)],
+        )
+        async def test_invalid_secs(clock, bad_secs):
+            with pytest.raises(TypeError, match=r"^must be int or float$"):
+                await clock.async_sleep_function(bad_secs)
+
+        @staticmethod
+        @pytest.mark.parametrize("secs", [0, 1, 2, 0.0, 0.1, 2.2])
+        async def test_valid_secs(clock, secs):
+            result = "a-result"
+            assert await clock.async_sleep_function(secs, "a-result") is result
+            assert clock.current_datetime == clock.start + clock_module.from_change(
+                secs
+            )
 
     class TestRunInSteps:
         @staticmethod
