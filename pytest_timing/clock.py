@@ -278,14 +278,35 @@ class Mark:
         return NotImplemented
 
 
+@dataclasses.dataclass(frozen=True)
+class TimeFunctions:
+    time: Callable
+    sleep: Callable
+    async_sleep: Callable
+
+    @classmethod
+    def save(cls):
+        return cls(time.time, time.sleep, asyncio.sleep)
+
+    def install(self):
+        time.time
+
+    def restore(self):
+        time.time = self.time
+        time.sleep = self.sleep
+        asyncio.sleep = self.async_sleep
+
+
 @contextlib.contextmanager
 def installed(clock: Clock):
-    original_time = time.time
+    original_functions = TimeFunctions.save()
     try:
         time.time = clock.time_function
-        yield clock, original_time
+        time.sleep = clock.sleep_function
+        asyncio.sleep = clock.async_sleep_function
+        yield original_functions
     finally:
-        time.time = original_time
+        original_functions.restore()
 
 
 __all__ = (
@@ -296,6 +317,7 @@ __all__ = (
     "Mark",
     "Step",
     "SyncOnlyError",
+    "TimeFunctions",
     "from_change",
     "from_step",
     "installed",
