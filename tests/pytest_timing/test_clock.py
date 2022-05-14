@@ -27,24 +27,49 @@ def call_collector(clock) -> CallCollector:
     return CallCollector(clock)
 
 
-class TestAsTimedelta:
+class TestFromStep:
     @staticmethod
-    @pytest.mark.parametrize("int_step", range(-4, 1))
-    def test_invalid_int(int_step):
-        with pytest.raises(ValueError, match=r"^step must be positive integer$"):
-            clock_module.as_timedelta(int_step)
+    @pytest.mark.parametrize("bad_step", [None, "1", defaults.DEFAULT_CLOCK_START])
+    def test_invalid_types(bad_step):
+        with pytest.raises(TypeError, match=r"^invalid step"):
+            clock_module.from_step(bad_step)
 
     @staticmethod
     @pytest.mark.parametrize("int_step", range(1, 5))
     def test_int(int_step):
         expected = datetime.timedelta(seconds=int_step)
-        assert clock_module.as_timedelta(int_step) == expected
+        assert clock_module.from_step(int_step) == expected
 
     @staticmethod
     @pytest.mark.parametrize("int_step", range(1, 5))
     def test_timedelta(int_step):
         expected = datetime.timedelta(seconds=int_step)
-        assert clock_module.as_timedelta(expected) is expected
+        assert clock_module.from_step(expected) is expected
+
+
+class TestFromChange:
+    @staticmethod
+    @pytest.mark.parametrize("bad_change", [None, "1", defaults.DEFAULT_CLOCK_START])
+    def test_invalid_types(bad_change):
+        with pytest.raises(TypeError, match=r"^invalid change$"):
+            clock_module.from_change(bad_change)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "number_change",
+        cast(list[clock_module.Change], list(range(-2, 3)))
+        + cast(list[clock_module.Change], [i * 0.5 for i in range(-2, 3)]),
+    )
+    def test_numbers(number_change):
+        expected = datetime.timedelta(seconds=number_change)
+        assert clock_module.from_change(number_change) == expected
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "timedelta_change", [datetime.timedelta(seconds=i * 0.5) for i in range(-2, 3)]
+    )
+    def test_timedelta(timedelta_change):
+        assert clock_module.from_change(timedelta_change) is timedelta_change
 
 
 class TestClock:
@@ -131,19 +156,6 @@ class TestClock:
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
 
-    class TestAsTimedelta:
-        @staticmethod
-        @pytest.mark.parametrize("steps", range(-2, 2))
-        def test_integer(clock, steps):
-            assert clock.as_timedelta(steps) == clock.step * steps
-
-        @staticmethod
-        @pytest.mark.parametrize(
-            "change", [datetime.timedelta(seconds=s) for s in range(-2, 2)]
-        )
-        def test_timedelta(clock, change):
-            assert clock.as_timedelta(change) is change
-
     @pytest.mark.asyncio
     class TestAsyncElapse:
         @staticmethod
@@ -153,6 +165,10 @@ class TestClock:
             + cast(
                 list[clock_module.Change],
                 [datetime.timedelta(seconds=s) for s in range(-2, 1)],
+            )
+            + cast(
+                list[clock_module.Change],
+                [s * 0.5 for s in range(-2, 1)],
             ),
         )
         async def test_negative_changes(clock, change):
@@ -160,10 +176,16 @@ class TestClock:
                 assert await clock.async_elapse(change)
 
         @staticmethod
-        @pytest.mark.parametrize("change", range(1, 3))
-        async def test_positive_integer(clock, change):
+        @pytest.mark.parametrize(
+            "change",
+            cast(list[clock_module.Change], list(range(1, 3)))
+            + cast(list[clock_module.Change], list(s * 0.5 for s in range(1, 3))),
+        )
+        async def test_positive_number(clock, change):
             await clock.async_elapse(change)
-            assert clock.current_datetime == clock.start + (clock.step * change)
+            assert clock.current_datetime == clock.start + clock_module.from_change(
+                change
+            )
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -299,13 +321,13 @@ class TestClock:
         @staticmethod
         def test_run_at_beginning(clock, call_collector):
             clock.run_in_steps(call_collector, 0)
-            clock.elapse()
+            clock.elapse_steps()
             assert call_collector.calls == [clock.start]
 
         @staticmethod
         def test_run_at_end(clock, call_collector):
             clock.run_in_steps(call_collector, 1)
-            clock.elapse()
+            clock.elapse_steps()
             assert call_collector.calls == [clock.start + clock.step]
 
         @staticmethod
@@ -314,7 +336,7 @@ class TestClock:
             clock.run_in_steps(call_collector, 2)
             clock.run_in_steps(call_collector, 2)
             clock.run_in_steps(call_collector, 3)
-            clock.elapse(3)
+            clock.elapse_steps(3)
             assert call_collector.calls == [
                 clock.start + clock.step,
                 clock.start + clock.step * 2,
@@ -328,7 +350,7 @@ class TestClock:
             clock.run_in_steps(call_collector.as_async, 2)
             clock.run_in_steps(call_collector.as_async, 2)
             clock.run_in_steps(call_collector.as_async, 3)
-            clock.elapse(3)
+            clock.elapse_steps(3)
             assert call_collector.calls == [
                 clock.start + clock.step,
                 clock.start + clock.step * 2,
@@ -339,7 +361,7 @@ class TestClock:
     @staticmethod
     def test_mark(clock):
         mark1 = clock.mark()
-        clock.elapse()
+        clock.elapse_steps()
         mark2 = clock.mark()
 
         assert mark1.clock is clock
@@ -403,19 +425,19 @@ class TestMark:
         @staticmethod
         def test_different_datetime(clock):
             m1 = clock.mark()
-            clock.elapse()
+            clock.elapse_steps()
             m2 = clock.mark()
             assert m1 < m2
 
         @staticmethod
         def test_general_sorting(clock):
             m1 = clock.mark()
-            clock.elapse()
+            clock.elapse_steps()
             m2 = clock.mark()
-            clock.elapse()
+            clock.elapse_steps()
             m3 = clock.mark()
             m4 = clock.mark()
-            clock.elapse()
+            clock.elapse_steps()
             m5 = clock.mark()
             unordered = [m2, m4, m1, m5, m3]
             assert sorted(unordered) == [m1, m2, m3, m4, m5]
@@ -424,7 +446,7 @@ class TestMark:
         @staticmethod
         @pytest.fixture
         def mark(clock):
-            clock.elapse()
+            clock.elapse_steps()
             return clock.mark()
 
         @staticmethod

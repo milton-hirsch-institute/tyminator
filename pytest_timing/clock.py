@@ -5,12 +5,13 @@ import datetime
 import functools
 import operator
 import time
+from typing import Any
 from typing import Awaitable
 from typing import Callable
 from typing import Union
 from typing import cast
 
-Change = Union[int, datetime.timedelta]
+Change = Union[int, float, datetime.timedelta]
 Step = Union[int, datetime.timedelta]
 Action = Callable[["Clock"], None]
 
@@ -25,13 +26,24 @@ class SyncOnlyError(Exception):
     """Raised when calling a synchronous only function in synchronous code."""
 
 
-def as_timedelta(step: Step) -> datetime.timedelta:
+def from_step(step: Any) -> datetime.timedelta:
     if isinstance(step, int):
-        if step <= 0:
-            raise ValueError("step must be positive integer")
         return datetime.timedelta(seconds=step)
-    else:
+    elif isinstance(step, datetime.timedelta):
         return step
+    else:
+        raise TypeError("invalid step")
+
+
+def from_change(change: Change) -> datetime.timedelta:
+    if isinstance(change, int):
+        change = float(change)
+    if isinstance(change, float):
+        return datetime.timedelta(seconds=change)
+    elif isinstance(change, datetime.timedelta):
+        return change
+    else:
+        raise TypeError("invalid change")
 
 
 class Clock:
@@ -63,7 +75,7 @@ class Clock:
         self.__start = self.__current_datetime = start
         self.__local_tz = local_tz
 
-        self.__step = as_timedelta(step)
+        self.__step = from_step(step)
 
     @property
     def current_datetime(self) -> datetime.datetime:
@@ -117,12 +129,6 @@ class Clock:
     def is_locked(self) -> bool:
         return self.__is_locked
 
-    def as_timedelta(self, change: Change):
-        if isinstance(change, int):
-            return self.step * change
-        else:
-            return change
-
     async def __run_pending_events(self, until: datetime.datetime):
         while self.__event_queue and (event := self.__event_queue[0]).when <= until:
             self.__current_datetime = event.when
@@ -133,8 +139,8 @@ class Clock:
             else:
                 action(self)
 
-    async def async_elapse(self, change: Change = 1) -> None:
-        change = self.as_timedelta(change)
+    async def async_elapse(self, change: Change) -> None:
+        change = from_change(change)
         if change <= _ZERO_TIMEDELTA:
             raise ValueError("change must be positive")
 
@@ -143,7 +149,10 @@ class Clock:
             await self.__run_pending_events(next_datetime)
             self.__current_datetime = next_datetime
 
-    def elapse(self, change: Change = 1) -> None:
+    async def async_elapse_steps(self, steps: int = 1) -> None:
+        return await self.async_elapse(self.step * steps)
+
+    def elapse(self, change: Change) -> None:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
@@ -151,9 +160,17 @@ class Clock:
         else:
             raise SyncOnlyError("only callable from synchronous functions")
 
+    def elapse_steps(self, steps: int = 1):
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.async_elapse_steps(steps))
+        else:
+            raise SyncOnlyError("only callable from synchronous functions")
+
     def next_datetime(self) -> datetime.datetime:
         current_datetime = self.__current_datetime
-        self.elapse()
+        self.elapse_steps()
         return current_datetime
 
     def next_tz_datetime(self) -> datetime.datetime:
@@ -267,6 +284,7 @@ __all__ = (
     "Mark",
     "Step",
     "SyncOnlyError",
-    "as_timedelta",
+    "from_change",
+    "from_step",
     "installed",
 )
