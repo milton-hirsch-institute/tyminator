@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import time
+from typing import cast
 
 import pytest
 
@@ -130,26 +131,54 @@ class TestClock:
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
 
+    class TestAsTimedelta:
+        @staticmethod
+        @pytest.mark.parametrize("steps", range(-2, 2))
+        def test_integer(clock, steps):
+            assert clock.as_timedelta(steps) == clock.step * steps
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            "change", [datetime.timedelta(seconds=s) for s in range(-2, 2)]
+        )
+        def test_timedelta(clock, change):
+            assert clock.as_timedelta(change) is change
+
     @pytest.mark.asyncio
     class TestAsyncElapse:
         @staticmethod
-        @pytest.mark.parametrize("steps", range(-4, 1))
-        async def test_invalid_steps(clock, steps):
-            with pytest.raises(ValueError, match="^steps must be positive integer$"):
-                await clock.async_elapse(steps)
+        @pytest.mark.parametrize(
+            "change",
+            cast(list[clock_module.Change], list(range(-2, 1)))
+            + cast(
+                list[clock_module.Change],
+                [datetime.timedelta(seconds=s) for s in range(-2, 1)],
+            ),
+        )
+        async def test_negative_changes(clock, change):
+            with pytest.raises(ValueError, match="^change must be positive"):
+                assert await clock.async_elapse(change)
+
+        @staticmethod
+        @pytest.mark.parametrize("change", range(1, 3))
+        async def test_positive_integer(clock, change):
+            await clock.async_elapse(change)
+            assert clock.current_datetime == clock.start + (clock.step * change)
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            "change", [datetime.timedelta(seconds=s) for s in range(1, 3)]
+        )
+        async def test_positive_timedelta(clock, change):
+            await clock.async_elapse(change)
+            assert clock.current_datetime == clock.start + change
 
         @staticmethod
         async def test_locked(clock):
             with clock.lock():
                 with pytest.raises(clock_module.LockError, match="^already locked$"):
-                    await clock.async_elapse()
+                    await clock.async_elapse(clock.step)
                 assert clock.current_datetime == clock.start
-
-        @staticmethod
-        @pytest.mark.parametrize("steps", range(1, 5))
-        async def test_valid_steps(clock, steps):
-            await clock.async_elapse(steps)
-            assert clock.current_tz_datetime == clock.tz_start + (clock.step * steps)
 
     class TestElapse:
         @staticmethod

@@ -10,8 +10,11 @@ from typing import Callable
 from typing import Union
 from typing import cast
 
+Change = Union[int, datetime.timedelta]
 Step = Union[int, datetime.timedelta]
 Action = Callable[["Clock"], None]
+
+_ZERO_TIMEDELTA = datetime.timedelta()
 
 
 class LockError(Exception):
@@ -114,6 +117,12 @@ class Clock:
     def is_locked(self) -> bool:
         return self.__is_locked
 
+    def as_timedelta(self, change: Change):
+        if isinstance(change, int):
+            return self.step * change
+        else:
+            return change
+
     async def __run_pending_events(self, until: datetime.datetime):
         while self.__event_queue and (event := self.__event_queue[0]).when <= until:
             self.__current_datetime = event.when
@@ -124,20 +133,21 @@ class Clock:
             else:
                 action(self)
 
-    async def async_elapse(self, steps: int = 1) -> None:
-        if steps <= 0:
-            raise ValueError("steps must be positive integer")
+    async def async_elapse(self, change: Change = 1) -> None:
+        change = self.as_timedelta(change)
+        if change <= _ZERO_TIMEDELTA:
+            raise ValueError("change must be positive")
 
         with self.lock():
-            next_datetime = self.__current_datetime + self.step * steps
+            next_datetime = self.__current_datetime + change
             await self.__run_pending_events(next_datetime)
             self.__current_datetime = next_datetime
 
-    def elapse(self, steps: int = 1) -> None:
+    def elapse(self, change: Change = 1) -> None:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            asyncio.run(self.async_elapse(steps))
+            asyncio.run(self.async_elapse(change))
         else:
             raise SyncOnlyError("only callable from synchronous functions")
 
@@ -251,6 +261,7 @@ def installed(clock: Clock):
 
 __all__ = (
     "Action",
+    "Change",
     "Clock",
     "LockError",
     "Mark",
