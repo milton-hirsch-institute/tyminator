@@ -1,9 +1,11 @@
+import asyncio
 import contextlib
 import dataclasses
 import datetime
 import functools
 import operator
 import time
+from typing import Awaitable
 from typing import Callable
 from typing import Union
 from typing import cast
@@ -14,6 +16,10 @@ Action = Callable[["Clock"], None]
 
 class LockError(Exception):
     """Raised when trying to take a step when clock not ready."""
+
+
+class SyncOnlyError(Exception):
+    """Raised when calling a synchronous only function in synchronous code."""
 
 
 def as_timedelta(step: Step) -> datetime.timedelta:
@@ -108,23 +114,36 @@ class Clock:
     def is_locked(self) -> bool:
         return self.__is_locked
 
-    def __run_pending_events(self, until: datetime.datetime):
+    async def __run_pending_events(self, until: datetime.datetime):
         while self.__event_queue and (event := self.__event_queue[0]).when <= until:
             self.__current_datetime = event.when
             del self.__event_queue[0]
-            event.action(self)
+            action = event.action
+            if asyncio.iscoroutinefunction(action):
+                await cast(Awaitable, action(self))
+            else:
+                action(self)
 
-    def elapse(self, steps: int = 1) -> None:
+    async def async_elapse(self, steps: int = 1) -> None:
         if steps <= 0:
             raise ValueError("steps must be positive integer")
+
         with self.lock():
             next_datetime = self.__current_datetime + self.step * steps
-            self.__run_pending_events(next_datetime)
+            await self.__run_pending_events(next_datetime)
             self.__current_datetime = next_datetime
+
+    def elapse(self, steps: int = 1) -> None:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.async_elapse(steps))
+        else:
+            raise SyncOnlyError("only callable from synchronous functions")
 
     def next_datetime(self) -> datetime.datetime:
         current_datetime = self.__current_datetime
-        self.elapse(1)
+        self.elapse()
         return current_datetime
 
     def next_tz_datetime(self) -> datetime.datetime:
@@ -136,8 +155,9 @@ class Clock:
     def time_function(self) -> float:
         try:
             return self.next_timestamp()
-        except LockError:
-            return self.current_timestamp
+        except (LockError, SyncOnlyError):
+            pass
+        return self.current_timestamp
 
     def next_timestamp(self) -> float:
         current_timestamp = self.current_timestamp
@@ -235,6 +255,7 @@ __all__ = (
     "LockError",
     "Mark",
     "Step",
+    "SyncOnlyError",
     "as_timedelta",
     "installed",
 )

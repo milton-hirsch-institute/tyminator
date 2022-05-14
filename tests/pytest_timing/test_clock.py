@@ -8,6 +8,28 @@ from pytest_timing import clock as clock_module
 from pytest_timing import defaults
 
 
+async def no_op():
+    pass
+
+
+@dataclasses.dataclass(frozen=True)
+class CallCollector:
+    clock: clock_module.Clock
+    calls: list[datetime.datetime] = dataclasses.field(default_factory=list)
+
+    def __call__(self, clock: clock_module.Clock):
+        assert clock is self.clock
+        self.calls.append(clock.current_datetime)
+
+    async def as_async(self, clock: clock_module.Clock):
+        self(clock)
+
+
+@pytest.fixture
+def call_collector(clock) -> CallCollector:
+    return CallCollector(clock)
+
+
 class TestAsTimedelta:
     @staticmethod
     @pytest.mark.parametrize("int_step", range(-4, 1))
@@ -112,25 +134,42 @@ class TestClock:
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
 
-    class TestElapse:
+    @pytest.mark.asyncio
+    class TestAsyncElapse:
         @staticmethod
-        def test_locked(clock):
+        @pytest.mark.parametrize("steps", range(-4, 1))
+        async def test_invalid_steps(clock, steps):
+            with pytest.raises(ValueError, match="^steps must be positive integer$"):
+                await clock.async_elapse(steps)
+
+        @staticmethod
+        async def test_locked(clock):
             with clock.lock():
                 with pytest.raises(clock_module.LockError, match="^already locked$"):
-                    clock.elapse()
+                    await clock.async_elapse()
                 assert clock.current_datetime == clock.start
 
         @staticmethod
-        @pytest.mark.parametrize("steps", range(-4, 1))
-        def test_invalid_steps(clock, steps):
-            with pytest.raises(ValueError, match="^steps must be positive integer$"):
-                clock.elapse(steps)
+        @pytest.mark.parametrize("steps", range(1, 5))
+        async def test_valid_steps(clock, steps):
+            await clock.async_elapse(steps)
+            assert clock.current_tz_datetime == clock.tz_start + (clock.step * steps)
+
+    class TestElapse:
+        @staticmethod
+        def test_sync(clock):
+            clock.elapse(2)
+            assert clock.current_tz_datetime == clock.tz_start + (clock.step * 2)
 
         @staticmethod
-        @pytest.mark.parametrize("steps", range(1, 5))
-        def test_valid_steps(clock, steps):
-            clock.elapse(steps)
-            assert clock.current_tz_datetime == clock.tz_start + (clock.step * steps)
+        @pytest.mark.asyncio
+        async def test_async(clock):
+            with pytest.raises(
+                clock_module.SyncOnlyError,
+                match="^only callable from synchronous functions$",
+            ):
+                clock.elapse(2)
+            assert clock.current_tz_datetime == clock.tz_start
 
     @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
     class TestNextDatetime:
@@ -173,6 +212,12 @@ class TestClock:
                         next_timestamp = clock.time_function()
                         assert next_timestamp == clock.start.timestamp()
                         assert clock.current_timestamp == next_timestamp
+
+            @staticmethod
+            @pytest.mark.asyncio
+            async def test_async(clock, clock_step):
+                clock.time_function()
+                assert clock.current_datetime == clock.start
 
         @staticmethod
         def test_next_timestamp(clock, clock_start):
@@ -220,20 +265,6 @@ class TestClock:
                 assert utc_dt_at_step == clock.utc_start + (clock.step * step)
 
     class TestRunInSteps:
-        @dataclasses.dataclass(frozen=True)
-        class CallCollector:
-            clock: clock_module.Clock
-            calls: list[datetime.datetime] = dataclasses.field(default_factory=list)
-
-            def __call__(self, clock: clock_module.Clock):
-                assert clock is self.clock
-                self.calls.append(clock.current_datetime)
-
-        @staticmethod
-        @pytest.fixture
-        def call_collector(clock) -> CallCollector:
-            return TestClock.TestRunInSteps.CallCollector(clock)
-
         @staticmethod
         @pytest.mark.parametrize("steps", range(-5, 0))
         def test_negative_steps(clock, steps, call_collector):
@@ -258,6 +289,20 @@ class TestClock:
             clock.run_in_steps(call_collector, 2)
             clock.run_in_steps(call_collector, 2)
             clock.run_in_steps(call_collector, 3)
+            clock.elapse(3)
+            assert call_collector.calls == [
+                clock.start + clock.step,
+                clock.start + clock.step * 2,
+                clock.start + clock.step * 2,
+                clock.start + clock.step * 3,
+            ]
+
+        @staticmethod
+        def test_async(clock, call_collector):
+            clock.run_in_steps(call_collector.as_async, 1)
+            clock.run_in_steps(call_collector.as_async, 2)
+            clock.run_in_steps(call_collector.as_async, 2)
+            clock.run_in_steps(call_collector.as_async, 3)
             clock.elapse(3)
             assert call_collector.calls == [
                 clock.start + clock.step,
@@ -306,7 +351,7 @@ class TestMark:
         @pytest.mark.parametrize("value", [None, 2.0, defaults.DEFAULT_CLOCK_START, 6])
         def test_unsupported(clock, value):
             with pytest.raises(TypeError):
-                clock.mark() < value
+                clock.mark() < value  # type: ignore
 
         @staticmethod
         def test_different_clocks(clock_start, clock_local_tz):
@@ -314,7 +359,7 @@ class TestMark:
             m2 = clock_module.Clock(clock_start).mark()
 
             with pytest.raises(TypeError):
-                m1 < m2
+                m1 < m2  # type: ignore
 
         @staticmethod
         def test_same_datetime(clock):
@@ -361,7 +406,7 @@ class TestMark:
         @pytest.mark.parametrize("value", [None, 2.0, defaults.DEFAULT_CLOCK_START])
         def test_unsupported(mark, value):
             with pytest.raises(TypeError):
-                mark + value
+                mark + value  # type: ignore
 
         @staticmethod
         @pytest.mark.parametrize("steps", range(-4, 5))
