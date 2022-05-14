@@ -8,10 +8,6 @@ from pytest_timing import clock as clock_module
 from pytest_timing import defaults
 
 
-async def no_op():
-    pass
-
-
 @dataclasses.dataclass(frozen=True)
 class CallCollector:
     clock: clock_module.Clock
