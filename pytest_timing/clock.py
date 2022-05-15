@@ -298,7 +298,7 @@ class Mark:
         else:
             return NotImplemented
 
-    def __add__(self, other) -> bool:
+    def __add__(self, other):
         if isinstance(other, int):
             other = from_step(other)
 
@@ -307,12 +307,15 @@ class Mark:
 
         return NotImplemented
 
-    def __sub__(self, other) -> bool:
+    def __sub__(self, other):
         if isinstance(other, int):
             other = from_step(other)
 
         if isinstance(other, Mark):
             other = other.when
+
+        if isinstance(other, datetime.datetime):
+            other = self.clock.as_unaware(other)
 
         if isinstance(other, (datetime.timedelta, datetime.datetime)):
             return self.when - other

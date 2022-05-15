@@ -652,6 +652,11 @@ class TestMark:
                 ) == datetime.timedelta(seconds=4)
 
             @staticmethod
+            def test_tz_datetime(clock, mark):
+                dt = clock.current_tz_datetime - datetime.timedelta(seconds=4)
+                assert mark - dt == datetime.timedelta(seconds=4)
+
+            @staticmethod
             def test_mark(clock, mark):
                 clock.elapse_steps(4)
                 other_mark = clock.mark()
