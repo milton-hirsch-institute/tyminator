@@ -240,13 +240,21 @@ class Clock:
     def utc_dt_at_step(self, step: int) -> datetime.datetime:
         return self.as_utc(self.tz_dt_at_step(step))
 
-    def run_in_steps(self, action: Action, steps: int):
-        if steps < 0:
-            raise ValueError("steps must be positive integer")
-        when = self.current_datetime + (self.__step * steps)
+    def run_at(self, action: Action, when: datetime.datetime):
+        when = self.as_unaware(when)
+        if when < self.__current_datetime:
+            raise ValueError("time must be in the future")
         event = self.__Event(when=when, action=action)
         self.__event_queue.append(event)
         self.__event_queue.sort(key=self.__Event.SORT_KEY)
+
+    def run_in(self, action: Action, change: Change):
+        when = self.__current_datetime + from_change(change)
+        self.run_at(action, when)
+
+    def run_in_steps(self, action: Action, steps: int):
+        change = self.__step * steps
+        self.run_in(action, change)
 
     def mark(self) -> "Mark":
         mark = Mark(self, self.current_datetime, self.__mark_seq)

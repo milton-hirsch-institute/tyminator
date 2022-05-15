@@ -410,52 +410,83 @@ class TestClock:
                 secs
             )
 
-    class TestRunInSteps:
+    class TestRunAt:
         @staticmethod
         @pytest.mark.parametrize("steps", range(-5, 0))
         def test_negative_steps(clock, steps, call_collector):
-            with pytest.raises(ValueError, match=r"^steps must be positive integer$"):
-                clock.run_in_steps(call_collector, steps)
+            delta = datetime.timedelta(seconds=steps)
+            when = clock.current_datetime + delta
+            with pytest.raises(ValueError, match=r"^time must be in the future$"):
+                clock.run_at(call_collector, when)
 
         @staticmethod
         def test_run_at_beginning(clock, call_collector):
-            clock.run_in_steps(call_collector, 0)
+            clock.run_at(call_collector, clock.current_datetime)
             clock.elapse_steps()
             assert call_collector.calls == [clock.start]
 
         @staticmethod
         def test_run_at_end(clock, call_collector):
-            clock.run_in_steps(call_collector, 1)
+            clock.run_at(call_collector, clock.current_datetime + clock.step)
             clock.elapse_steps()
             assert call_collector.calls == [clock.start + clock.step]
 
         @staticmethod
         def test_run_all(clock, call_collector):
-            clock.run_in_steps(call_collector, 1)
-            clock.run_in_steps(call_collector, 2)
-            clock.run_in_steps(call_collector, 2)
-            clock.run_in_steps(call_collector, 3)
+            d1 = clock.current_datetime + datetime.timedelta(seconds=1)
+            d2 = clock.current_datetime + datetime.timedelta(seconds=1.5)
+            d3 = clock.current_datetime + datetime.timedelta(seconds=1.5)
+            d4 = clock.current_datetime + datetime.timedelta(seconds=2)
+            clock.run_at(call_collector, d1)
+            clock.run_at(call_collector, d2)
+            clock.run_at(call_collector, d3)
+            clock.run_at(call_collector, d4)
             clock.elapse_steps(3)
-            assert call_collector.calls == [
-                clock.start + clock.step,
-                clock.start + clock.step * 2,
-                clock.start + clock.step * 2,
-                clock.start + clock.step * 3,
-            ]
+            assert call_collector.calls == [d1, d2, d3, d4]
 
         @staticmethod
-        def test_async(clock, call_collector):
-            clock.run_in_steps(call_collector.as_async, 1)
-            clock.run_in_steps(call_collector.as_async, 2)
-            clock.run_in_steps(call_collector.as_async, 2)
-            clock.run_in_steps(call_collector.as_async, 3)
-            clock.elapse_steps(3)
-            assert call_collector.calls == [
-                clock.start + clock.step,
-                clock.start + clock.step * 2,
-                clock.start + clock.step * 2,
-                clock.start + clock.step * 3,
-            ]
+        @pytest.mark.asyncio
+        async def test_async(clock, call_collector):
+            d1 = clock.current_datetime + datetime.timedelta(seconds=1)
+            d2 = clock.current_datetime + datetime.timedelta(seconds=1.5)
+            d3 = clock.current_datetime + datetime.timedelta(seconds=1.5)
+            d4 = clock.current_datetime + datetime.timedelta(seconds=2)
+            clock.run_at(call_collector, d1)
+            clock.run_at(call_collector, d2)
+            clock.run_at(call_collector, d3)
+            clock.run_at(call_collector, d4)
+            await clock.async_elapse_steps(3)
+            assert call_collector.calls == [d1, d2, d3, d4]
+
+    def test_run_in(self, clock, call_collector):
+        delta1 = datetime.timedelta(seconds=1)
+        delta2 = datetime.timedelta(seconds=1.5)
+        delta3 = datetime.timedelta(seconds=1.5)
+        delta4 = datetime.timedelta(seconds=2)
+        clock.run_in(call_collector, delta1)
+        clock.run_in(call_collector, delta2)
+        clock.run_in(call_collector, delta3)
+        clock.run_in(call_collector, delta4)
+        clock.elapse_steps(3)
+        assert call_collector.calls == [
+            clock.start + delta1,
+            clock.start + delta2,
+            clock.start + delta3,
+            clock.start + delta4,
+        ]
+
+    def test_run_in_steps(self, clock, call_collector):
+        clock.run_in(call_collector, 1)
+        clock.run_in(call_collector, 2)
+        clock.run_in(call_collector, 2)
+        clock.run_in(call_collector, 3)
+        clock.elapse_steps(3)
+        assert call_collector.calls == [
+            clock.start + clock.step,
+            clock.start + (clock.step * 2),
+            clock.start + (clock.step * 2),
+            clock.start + (clock.step * 3),
+        ]
 
     @staticmethod
     def test_mark(clock):
