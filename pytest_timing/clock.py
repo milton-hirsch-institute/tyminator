@@ -322,6 +322,13 @@ class Mark:
 
         return NotImplemented
 
+    def __rsub__(self, other):
+        if isinstance(other, datetime.datetime):
+            other = self.clock.as_unaware(other)
+            return other - self.when
+
+        return NotImplemented
+
 
 @dataclasses.dataclass(frozen=True)
 class TimeFunctions:

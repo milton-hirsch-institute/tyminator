@@ -662,6 +662,25 @@ class TestMark:
                 other_mark = clock.mark()
                 assert other_mark - mark == datetime.timedelta(seconds=4)
 
+        class TestRSub:
+            @staticmethod
+            @pytest.mark.parametrize(
+                "value", [None, 2.0, datetime.timedelta(seconds=3)]
+            )
+            def test_unsupported(mark, value):
+                with pytest.raises(TypeError):
+                    value - mark  # type: ignore
+
+            @staticmethod
+            def test_datetime(clock, mark):
+                dt = clock.current_datetime + datetime.timedelta(seconds=4)
+                assert dt - mark == datetime.timedelta(seconds=4)
+
+            @staticmethod
+            def test_tz_datetime(clock, mark):
+                dt = clock.current_tz_datetime + datetime.timedelta(seconds=4)
+                assert dt - mark == datetime.timedelta(seconds=4)
+
 
 class TestTimeFunctions:
     def test_save(self):
