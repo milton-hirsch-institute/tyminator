@@ -572,6 +572,12 @@ class TestMark:
             unordered = [m2, m4, m1, m5, m3]
             assert sorted(unordered) == [m1, m2, m3, m4, m5]
 
+    @staticmethod
+    def test_elpased(clock):
+        clock.elapse_steps(5)
+        mark = clock.mark()
+        assert mark.elpased == (clock.start + (clock.step * 5)) - clock.start
+
     class TestAdd:
         @staticmethod
         @pytest.fixture
