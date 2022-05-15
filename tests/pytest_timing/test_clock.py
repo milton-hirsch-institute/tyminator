@@ -602,6 +602,61 @@ class TestMark:
             td = datetime.timedelta(seconds=seconds)
             assert mark + td == mark.when + td
 
+    class TestOperators:
+        @staticmethod
+        @pytest.fixture
+        def mark(clock):
+            clock.elapse_steps(2)
+            return clock.mark()
+
+        class TestAdd:
+            @staticmethod
+            @pytest.mark.parametrize("value", [None, 2.0, defaults.DEFAULT_CLOCK_START])
+            def test_unsupported(mark, value):
+                with pytest.raises(TypeError):
+                    mark + value  # type: ignore
+
+            @staticmethod
+            @pytest.mark.parametrize("steps", range(-4, 5))
+            def test_int(mark, steps):
+                assert mark + steps == mark.when + mark.clock.step * steps
+
+            @staticmethod
+            @pytest.mark.parametrize("seconds", range(5))
+            def test_timedelta(mark, seconds):
+                td = datetime.timedelta(seconds=seconds)
+                assert mark + td == mark.when + td
+
+        class TestSub:
+            @staticmethod
+            @pytest.mark.parametrize("value", [None, 2.0])
+            def test_unsupported(mark, value):
+                with pytest.raises(TypeError):
+                    mark - value  # type: ignore
+
+            @staticmethod
+            @pytest.mark.parametrize("steps", range(-4, 5))
+            def test_int(mark, steps):
+                assert mark - steps == mark.when - mark.clock.step * steps
+
+            @staticmethod
+            @pytest.mark.parametrize("seconds", range(5))
+            def test_timedelta(mark, seconds):
+                td = datetime.timedelta(seconds=seconds)
+                assert mark - td == mark.when - td
+
+            @staticmethod
+            def test_datetime(clock, mark):
+                assert mark - (
+                    clock.current_datetime - datetime.timedelta(seconds=4)
+                ) == datetime.timedelta(seconds=4)
+
+            @staticmethod
+            def test_mark(clock, mark):
+                clock.elapse_steps(4)
+                other_mark = clock.mark()
+                assert other_mark - mark == datetime.timedelta(seconds=4)
+
 
 class TestTimeFunctions:
     def test_save(self):

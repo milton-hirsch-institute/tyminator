@@ -307,6 +307,18 @@ class Mark:
 
         return NotImplemented
 
+    def __sub__(self, other) -> bool:
+        if isinstance(other, int):
+            other = from_step(other)
+
+        if isinstance(other, Mark):
+            other = other.when
+
+        if isinstance(other, (datetime.timedelta, datetime.datetime)):
+            return self.when - other
+
+        return NotImplemented
+
 
 @dataclasses.dataclass(frozen=True)
 class TimeFunctions:
