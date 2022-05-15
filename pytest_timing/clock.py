@@ -115,11 +115,11 @@ class Clock:
 
     @functools.cached_property
     def tz_start(self) -> datetime.datetime:
-        return self.__start.replace(tzinfo=self.__local_tz)
+        return self.as_tz(self.__start)
 
     @functools.cached_property
     def utc_start(self) -> datetime.datetime:
-        return self.tz_start.astimezone(datetime.timezone.utc)
+        return self.as_utc(self.__start)
 
     @property
     def step(self) -> datetime.timedelta:
@@ -128,6 +128,24 @@ class Clock:
     @property
     def is_locked(self) -> bool:
         return self.__is_locked
+
+    def as_unaware(self, dt: datetime.datetime):
+        if dt.tzinfo is not None:
+            if dt.tzinfo != self.__local_tz:
+                dt = self.as_tz(dt)
+            dt = dt.replace(tzinfo=None)
+        return dt
+
+    def as_tz(self, dt: datetime.datetime):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=self.local_tz)
+        else:
+            return dt.astimezone(self.local_tz)
+
+    def as_utc(self, dt: datetime.datetime):
+        if dt.tzinfo is None:
+            dt = self.as_tz(dt)
+        return dt.astimezone(datetime.timezone.utc)
 
     async def __run_pending_events(self, until: datetime.datetime):
         while self.__event_queue and (event := self.__event_queue[0]).when <= until:
@@ -174,10 +192,10 @@ class Clock:
         return current_datetime
 
     def next_tz_datetime(self) -> datetime.datetime:
-        return self.next_datetime().replace(tzinfo=self.__local_tz)
+        return self.as_tz(self.next_datetime())
 
     def next_utc_datetime(self) -> datetime.datetime:
-        return self.next_tz_datetime().astimezone(datetime.timezone.utc)
+        return self.as_utc(self.next_tz_datetime())
 
     def time_function(self) -> float:
         try:
@@ -217,10 +235,10 @@ class Clock:
         return self.__start + self.__step * step
 
     def tz_dt_at_step(self, step: int) -> datetime.datetime:
-        return self.dt_at_step(step).replace(tzinfo=self.__local_tz)
+        return self.as_tz(self.dt_at_step(step))
 
     def utc_dt_at_step(self, step: int) -> datetime.datetime:
-        return self.tz_dt_at_step(step).astimezone(datetime.timezone.utc)
+        return self.as_utc(self.tz_dt_at_step(step))
 
     def run_in_steps(self, action: Action, steps: int):
         if steps < 0:
@@ -254,13 +272,13 @@ class Mark:
     when: datetime.datetime
     seq: int
 
-    @property
+    @functools.cached_property
     def tz_when(self) -> datetime.datetime:
-        return self.when.replace(tzinfo=self.clock.local_tz)
+        return self.clock.as_tz(self.when)
 
-    @property
+    @functools.cached_property
     def utc_when(self) -> datetime.datetime:
-        return self.tz_when.astimezone(datetime.timezone.utc)
+        return self.clock.as_utc(self.tz_when)
 
     def __lt__(self, other) -> bool:
         if isinstance(other, Mark) and self.clock is other.clock:

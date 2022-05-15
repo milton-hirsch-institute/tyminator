@@ -157,6 +157,73 @@ class TestClock:
         expected = expected.astimezone(datetime.timezone.utc)
         assert clock.current_utc_datetime == expected
 
+    class TestTzConversion:
+        @staticmethod
+        @pytest.fixture
+        def unaware():
+            return datetime.datetime(2014, 1, 1, 12)
+
+        @staticmethod
+        @pytest.fixture
+        def tz(unaware):
+            return unaware.replace(
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-7))
+            )
+
+        @staticmethod
+        @pytest.fixture
+        def utc(tz):
+            return tz.astimezone(datetime.timezone.utc)
+
+        class TestAsUnaware:
+            @staticmethod
+            def test_unaware(clock, unaware):
+                assert clock.as_unaware(unaware) is unaware
+
+            @staticmethod
+            def test_tz(clock, tz):
+                assert clock.as_unaware(tz) == datetime.datetime(2014, 1, 1, 21)
+
+            @staticmethod
+            def test_utc(clock, utc):
+                assert clock.as_unaware(utc) == datetime.datetime(2014, 1, 1, 21)
+
+        class TestAsTz:
+            @staticmethod
+            def test_unaware(clock, unaware, clock_local_tz):
+                assert clock.as_tz(unaware) == unaware.replace(tzinfo=clock_local_tz)
+
+            @staticmethod
+            def test_tz(clock, tz, clock_local_tz):
+                assert clock.as_tz(tz) == datetime.datetime(
+                    2014, 1, 1, 21, tzinfo=clock_local_tz
+                )
+
+            @staticmethod
+            def test_utc(clock, utc, clock_local_tz):
+                assert clock.as_tz(utc) == datetime.datetime(
+                    2014, 1, 1, 21, tzinfo=clock_local_tz
+                )
+
+        class TestAsUtc:
+            @staticmethod
+            def test_unaware(clock, unaware):
+                assert clock.as_utc(unaware) == datetime.datetime(
+                    2014, 1, 1, 10, tzinfo=datetime.timezone.utc
+                )
+
+            @staticmethod
+            def test_tz(clock, tz):
+                assert clock.as_utc(tz) == datetime.datetime(
+                    2014, 1, 1, 19, tzinfo=datetime.timezone.utc
+                )
+
+            @staticmethod
+            def test_utc(clock, utc):
+                assert clock.as_utc(utc) == datetime.datetime(
+                    2014, 1, 1, 19, tzinfo=datetime.timezone.utc
+                )
+
     @pytest.mark.asyncio
     class TestAsyncElapse:
         @staticmethod
