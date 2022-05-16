@@ -3,6 +3,7 @@ import functools
 import importlib
 import operator
 import sys
+import types
 from typing import Any
 from typing import Callable
 from typing import Optional
@@ -27,16 +28,16 @@ class Spec:
         return ".".join(parent_name) if parent_name else None
 
     @functools.cached_property
-    def __getter(self):
+    def __getter(self) -> operator.attrgetter:
         return operator.attrgetter(self.qualified_name)
 
-    def get_module(self):
+    def get_module(self) -> types.ModuleType:
         try:
             return sys.modules[self.module_name]
         except KeyError:
             return importlib.import_module(self.module_name)
 
-    def get_obj(self):
+    def get_obj(self) -> Any:
         return self.__getter(self.get_module())
 
     @classmethod
@@ -50,7 +51,7 @@ class Patch:
     original_obj: Any
     spec: Spec
 
-    def install(self, obj: Any):
+    def install(self, obj: Any) -> None:
         module = self.spec.get_module()
         parent_name = self.spec.parent_qualified_name
         if parent_name:
@@ -60,11 +61,11 @@ class Patch:
             parent = module
         setattr(parent, self.spec.name, obj)
 
-    def restore(self):
+    def restore(self) -> None:
         self.install(self.original_obj)
 
     @classmethod
-    def from_spec(cls, spec: Spec):
+    def from_spec(cls, spec: Spec) -> "Patch":
         return cls(spec.get_obj(), spec)
 
 

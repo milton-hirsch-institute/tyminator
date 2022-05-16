@@ -48,6 +48,7 @@ class TestModule:
             if not (
                 symbol.startswith("_")
                 or isinstance(value, types.ModuleType)
+                or isinstance(value, typing.TypeVar)
                 or id(value) in TYPING_VALUE_IDS
             ):
                 assert symbol in all_symbols
