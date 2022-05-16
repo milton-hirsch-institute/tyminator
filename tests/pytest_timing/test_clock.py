@@ -451,14 +451,15 @@ class TestClock:
             d2 = clock.current_datetime + datetime.timedelta(seconds=1.5)
             d3 = clock.current_datetime + datetime.timedelta(seconds=1.5)
             d4 = clock.current_datetime + datetime.timedelta(seconds=2)
-            clock.run_at(call_collector, d1)
-            clock.run_at(call_collector, d2)
-            clock.run_at(call_collector, d3)
-            clock.run_at(call_collector, d4)
+            clock.run_at(call_collector.as_async, d1)
+            clock.run_at(call_collector.as_async, d2)
+            clock.run_at(call_collector.as_async, d3)
+            clock.run_at(call_collector.as_async, d4)
             await clock.async_elapse_steps(3)
             assert call_collector.calls == [d1, d2, d3, d4]
 
-    def test_run_in(self, clock, call_collector):
+    @staticmethod
+    def test_run_in(clock, call_collector):
         delta1 = datetime.timedelta(seconds=1)
         delta2 = datetime.timedelta(seconds=1.5)
         delta3 = datetime.timedelta(seconds=1.5)
@@ -475,11 +476,13 @@ class TestClock:
             clock.start + delta4,
         ]
 
-    def test_run_in_steps(self, clock, call_collector):
-        clock.run_in(call_collector, 1)
-        clock.run_in(call_collector, 2)
-        clock.run_in(call_collector, 2)
-        clock.run_in(call_collector, 3)
+    @staticmethod
+    @pytest.mark.parametrize("clock_step", [1, 2, 3])
+    def test_run_in_steps(clock, call_collector):
+        clock.run_in_steps(call_collector, 1)
+        clock.run_in_steps(call_collector, 2)
+        clock.run_in_steps(call_collector, 2)
+        clock.run_in_steps(call_collector, 3)
         clock.elapse_steps(3)
         assert call_collector.calls == [
             clock.start + clock.step,
