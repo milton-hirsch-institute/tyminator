@@ -72,5 +72,12 @@ class Patch:
         spec = Spec.from_target(target)
         return cls.from_spec(spec)
 
+    @classmethod
+    def from_any(cls, any: Any) -> "Patch":
+        if isinstance(any, Spec):
+            return cls.from_spec(any)
+        else:
+            return cls.from_target(any)
+
 
 __all__ = ("Patch", "Spec")

@@ -147,3 +147,23 @@ class TestPatch:
             monkey_patch.Patch.from_target(target_module.Top.Nested.DoubleNested)
             == double_nested_patch
         )
+
+    @staticmethod
+    def test_from_any(
+        top_spec,
+        nested_spec,
+        double_nested_spec,
+        top_patch,
+        nested_patch,
+        double_nested_patch,
+    ):
+        assert monkey_patch.Patch.from_any(top_spec) == top_patch
+        assert monkey_patch.Patch.from_any(nested_spec) == nested_patch
+        assert monkey_patch.Patch.from_any(double_nested_spec) == double_nested_patch
+
+        assert monkey_patch.Patch.from_any(target_module.Top) == top_patch
+        assert monkey_patch.Patch.from_any(target_module.Top.Nested) == nested_patch
+        assert (
+            monkey_patch.Patch.from_any(target_module.Top.Nested.DoubleNested)
+            == double_nested_patch
+        )
