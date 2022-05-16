@@ -8,6 +8,7 @@ import time
 from typing import Any
 from typing import Awaitable
 from typing import Callable
+from typing import Final
 from typing import Union
 from typing import cast
 
@@ -15,7 +16,7 @@ Change = Union[int, float, datetime.timedelta]
 Step = Union[int, datetime.timedelta]
 Action = Callable[["Clock"], None]
 
-_ZERO_TIMEDELTA = datetime.timedelta()
+_ZERO_TIMEDELTA: Final = datetime.timedelta()
 
 
 class LockError(Exception):
