@@ -340,9 +340,6 @@ class TimeFunctions:
     def save(cls):
         return cls(time.time, time.sleep, asyncio.sleep)
 
-    def install(self):
-        time.time
-
     def restore(self):
         time.time = self.time
         time.sleep = self.sleep

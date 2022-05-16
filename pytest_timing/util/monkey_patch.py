@@ -5,7 +5,6 @@ import operator
 import sys
 import types
 from typing import Any
-from typing import Callable
 from typing import Optional
 
 
@@ -15,7 +14,7 @@ class Spec:
     qualified_name: str
 
     @functools.cached_property
-    def name(self):
+    def name(self) -> str:
         return self.__qualified_name_tuple[-1]
 
     @functools.cached_property
@@ -41,7 +40,7 @@ class Spec:
         return self.__getter(self.get_module())
 
     @classmethod
-    def from_target(cls, target: Callable) -> "Spec":
+    def from_target(cls, target: Any) -> "Spec":
         return cls(target.__module__, target.__qualname__)
 
 
@@ -67,6 +66,11 @@ class Patch:
     @classmethod
     def from_spec(cls, spec: Spec) -> "Patch":
         return cls(spec.get_obj(), spec)
+
+    @classmethod
+    def from_target(cls, target: Any) -> "Patch":
+        spec = Spec.from_target(target)
+        return cls.from_spec(spec)
 
 
 __all__ = ("Patch", "Spec")

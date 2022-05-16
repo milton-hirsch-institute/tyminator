@@ -91,20 +91,6 @@ class TestSpec:
 
 
 class TestPatch:
-    @staticmethod
-    def test_from_spec(top_spec, nested_spec, double_nested_spec):
-        top_patch = monkey_patch.Patch.from_spec(top_spec)
-        nested_patch = monkey_patch.Patch.from_spec(nested_spec)
-        double_nested_patch = monkey_patch.Patch.from_spec(double_nested_spec)
-
-        assert top_patch.spec is top_spec
-        assert nested_patch.spec is nested_spec
-        assert double_nested_patch.spec is double_nested_spec
-
-        assert top_patch.original_obj is target_module.Top
-        assert nested_patch.original_obj is target_module.Top.Nested
-        assert double_nested_patch.original_obj is target_module.Top.Nested.DoubleNested
-
     class TestInstallAndRestore:
         @staticmethod
         def test_top(top_patch):
@@ -138,3 +124,26 @@ class TestPatch:
                     target_module.Top.Nested.DoubleNested
                     is double_nested_patch.original_obj
                 )
+
+    @staticmethod
+    def test_from_spec(top_spec, nested_spec, double_nested_spec):
+        top_patch = monkey_patch.Patch.from_spec(top_spec)
+        nested_patch = monkey_patch.Patch.from_spec(nested_spec)
+        double_nested_patch = monkey_patch.Patch.from_spec(double_nested_spec)
+
+        assert top_patch.spec is top_spec
+        assert nested_patch.spec is nested_spec
+        assert double_nested_patch.spec is double_nested_spec
+
+        assert top_patch.original_obj is target_module.Top
+        assert nested_patch.original_obj is target_module.Top.Nested
+        assert double_nested_patch.original_obj is target_module.Top.Nested.DoubleNested
+
+    @staticmethod
+    def test_from_target(top_patch, nested_patch, double_nested_patch):
+        assert monkey_patch.Patch.from_target(target_module.Top) == top_patch
+        assert monkey_patch.Patch.from_target(target_module.Top.Nested) == nested_patch
+        assert (
+            monkey_patch.Patch.from_target(target_module.Top.Nested.DoubleNested)
+            == double_nested_patch
+        )
