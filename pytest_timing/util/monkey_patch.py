@@ -4,6 +4,7 @@ import importlib
 import operator
 import sys
 import types
+import typing
 from typing import Any
 from typing import Optional
 
@@ -80,4 +81,50 @@ class Patch:
             return cls.from_target(any)
 
 
-__all__ = ("Patch", "Spec")
+@typing.final
+class PatchSet:
+    __patches: dict[str, Patch]
+    __initialized = False
+
+    def __init__(self, **kwargs):
+        self.__patches = {}
+        for name, value in kwargs.items():
+            self.__patches[name] = Patch.from_any(value)
+        self.__initialized = True
+
+    def install(self, **kwargs):
+        missing_patches = self.__patches.keys() - kwargs.keys()
+        if missing_patches:
+            missing_patches_list = ", ".join(sorted(missing_patches))
+            raise ValueError(f"missing patches: {missing_patches_list}")
+
+        unexpected_patches = kwargs.keys() - self.__patches.keys()
+        if unexpected_patches:
+            extra_patches_list = ", ".join(sorted(unexpected_patches))
+            raise ValueError(f"unexpected patches: {extra_patches_list}")
+
+        for name, patch in self.__patches.items():
+            patch.install(kwargs[name])
+
+    def restore(self):
+        for patch in self.__patches.values():
+            patch.restore()
+
+    def __getattr__(self, item):
+        try:
+            patch = self.__patches[item]
+        except KeyError:
+            return getattr(super(), item)
+        else:
+            return patch.original_obj
+
+    def __setattr__(self, key, value):
+        if self.__initialized:
+            raise AttributeError(
+                f"{type(self).__name__!r} object has no attribute {key!r}"
+            )
+        else:
+            object.__setattr__(self, key, value)
+
+
+__all__ = ("Patch", "PatchSet", "Spec")
