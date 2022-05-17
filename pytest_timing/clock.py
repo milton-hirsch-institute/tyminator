@@ -8,7 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Final
 from typing import Union
-from typing import cast
 
 from pytest_timing.util import monkey_patch
 
@@ -53,7 +52,7 @@ class Clock:
     __local_tz: datetime.tzinfo
     __step: datetime.timedelta
     __is_locked: bool = False
-    __event_queue: list[__Event] = cast(list[__Event], [])
+    __event_queue: list[__Event] = []
     __mark_seq: int = 0
 
     def __init__(
