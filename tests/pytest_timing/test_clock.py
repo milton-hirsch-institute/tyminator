@@ -3,7 +3,6 @@ import dataclasses
 import datetime
 import importlib
 import time
-from typing import cast
 
 import pytest
 
@@ -56,8 +55,7 @@ class TestFromChange:
     @staticmethod
     @pytest.mark.parametrize(
         "number_change",
-        cast(list[clock_module.Change], list(range(-2, 3)))
-        + cast(list[clock_module.Change], [i * 0.5 for i in range(-2, 3)]),
+        [*list(range(-2, 3)), *[i * 0.5 for i in range(-2, 3)]],
     )
     def test_numbers(number_change):
         expected = datetime.timedelta(seconds=number_change)
@@ -224,15 +222,11 @@ class TestClock:
         @staticmethod
         @pytest.mark.parametrize(
             "change",
-            cast(list[clock_module.Change], list(range(-3, 0)))
-            + cast(
-                list[clock_module.Change],
-                [datetime.timedelta(seconds=s) for s in range(-3, 0)],
-            )
-            + cast(
-                list[clock_module.Change],
-                [s * 0.5 for s in range(-3, 0)],
-            ),
+            [
+                *list(range(-3, 0)),
+                *[datetime.timedelta(seconds=s) for s in range(-3, 0)],
+                *[s * 0.5 for s in range(-3, 0)],
+            ],
         )
         def test_negative_changes(clock, change):
             with pytest.raises(ValueError, match="^change must be positive"):
@@ -240,9 +234,7 @@ class TestClock:
 
         @staticmethod
         @pytest.mark.parametrize(
-            "change",
-            cast(list[clock_module.Change], list(range(3)))
-            + cast(list[clock_module.Change], list(s * 0.5 for s in range(3))),
+            "change", [*list(range(3)), *list(s * 0.5 for s in range(3))]
         )
         def test_positive_number(clock, change):
             clock.elapse(change)
