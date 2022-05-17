@@ -47,6 +47,6 @@ repos:
       - id: test
         name: tests
         language: system
-        entry: poetry run pytest --cov pytest_timing
+        entry: poetry run pytest --cov
         types: [python]
         pass_filenames: false
