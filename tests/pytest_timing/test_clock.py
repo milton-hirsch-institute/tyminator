@@ -40,12 +40,6 @@ def reloaded_target_module():
 
 class TestFromStep:
     @staticmethod
-    @pytest.mark.parametrize("bad_step", [None, "1", defaults.DEFAULT_CLOCK_START])
-    def test_invalid_types(bad_step):
-        with pytest.raises(TypeError, match=r"^invalid step"):
-            clock_module.from_step(bad_step)
-
-    @staticmethod
     @pytest.mark.parametrize("int_step", range(1, 5))
     def test_int(int_step):
         expected = datetime.timedelta(seconds=int_step)
@@ -59,12 +53,6 @@ class TestFromStep:
 
 
 class TestFromChange:
-    @staticmethod
-    @pytest.mark.parametrize("bad_change", [None, "1", defaults.DEFAULT_CLOCK_START])
-    def test_invalid_types(bad_change):
-        with pytest.raises(TypeError, match=r"^invalid change$"):
-            clock_module.from_change(bad_change)
-
     @staticmethod
     @pytest.mark.parametrize(
         "number_change",
@@ -170,38 +158,36 @@ class TestClock:
     class TestTzConversion:
         @staticmethod
         @pytest.fixture
-        def unaware():
+        def naive():
             return datetime.datetime(2014, 1, 1, 12)
 
         @staticmethod
         @pytest.fixture
-        def tz(unaware):
-            return unaware.replace(
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-7))
-            )
+        def tz(naive):
+            return naive.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
 
         @staticmethod
         @pytest.fixture
         def utc(tz):
             return tz.astimezone(datetime.timezone.utc)
 
-        class TestAsUnaware:
+        class TestAsNaive:
             @staticmethod
-            def test_unaware(clock, unaware):
-                assert clock.as_unaware(unaware) is unaware
+            def test_naive(clock, naive):
+                assert clock.as_naive(naive) is naive
 
             @staticmethod
             def test_tz(clock, tz):
-                assert clock.as_unaware(tz) == datetime.datetime(2014, 1, 1, 21)
+                assert clock.as_naive(tz) == datetime.datetime(2014, 1, 1, 21)
 
             @staticmethod
             def test_utc(clock, utc):
-                assert clock.as_unaware(utc) == datetime.datetime(2014, 1, 1, 21)
+                assert clock.as_naive(utc) == datetime.datetime(2014, 1, 1, 21)
 
         class TestAsTz:
             @staticmethod
-            def test_unaware(clock, unaware, clock_local_tz):
-                assert clock.as_tz(unaware) == unaware.replace(tzinfo=clock_local_tz)
+            def test_naive(clock, naive, clock_local_tz):
+                assert clock.as_tz(naive) == naive.replace(tzinfo=clock_local_tz)
 
             @staticmethod
             def test_tz(clock, tz, clock_local_tz):
@@ -217,8 +203,8 @@ class TestClock:
 
         class TestAsUtc:
             @staticmethod
-            def test_unaware(clock, unaware):
-                assert clock.as_utc(unaware) == datetime.datetime(
+            def test_naive(clock, naive):
+                assert clock.as_utc(naive) == datetime.datetime(
                     2014, 1, 1, 10, tzinfo=datetime.timezone.utc
                 )
 
