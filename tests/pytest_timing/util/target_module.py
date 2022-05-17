@@ -4,13 +4,13 @@ class Top:
             """Nothing here"""
 
 
-def time_func() -> float:
-    raise NotImplementedError
+def object1():
+    pass
 
 
-def sleep_func(secs) -> None:
-    raise NotImplementedError
+def object2():
+    pass
 
 
-def async_sleep_func(delay) -> None:
-    raise NotImplementedError
+def object3():
+    pass

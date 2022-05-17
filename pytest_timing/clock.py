@@ -4,13 +4,14 @@ import dataclasses
 import datetime
 import functools
 import operator
-import time
 from typing import Any
 from typing import Awaitable
 from typing import Callable
 from typing import Final
 from typing import Union
 from typing import cast
+
+from pytest_timing.util import monkey_patch
 
 Change = Union[int, float, datetime.timedelta]
 Step = Union[int, datetime.timedelta]
@@ -331,32 +332,26 @@ class Mark:
         return NotImplemented
 
 
-@dataclasses.dataclass(frozen=True)
-class TimeFunctions:
-    time: Callable
-    sleep: Callable
-    async_sleep: Callable
-
-    @classmethod
-    def save(cls):
-        return cls(time.time, time.sleep, asyncio.sleep)
-
-    def restore(self):
-        time.time = self.time
-        time.sleep = self.sleep
-        asyncio.sleep = self.async_sleep
-
-
 @contextlib.contextmanager
-def installed(clock: Clock):
-    original_functions = TimeFunctions.save()
+def installed(
+    clock: Clock,
+    *,
+    time: Any = monkey_patch.Spec("time", "time"),
+    sleep: Any = monkey_patch.Spec("time", "sleep"),
+    async_sleep: Any = monkey_patch.Spec("asyncio", "sleep"),
+):
+    time_functions = monkey_patch.PatchSet(
+        time=time, sleep=sleep, async_sleep=async_sleep
+    )
     try:
-        time.time = clock.time_function
-        time.sleep = clock.sleep_function
-        asyncio.sleep = clock.async_sleep_function
-        yield original_functions
+        time_functions.install(
+            time=clock.time_function,
+            sleep=clock.sleep_function,
+            async_sleep=clock.async_sleep_function,
+        )
+        yield time_functions
     finally:
-        original_functions.restore()
+        time_functions.restore()
 
 
 __all__ = (
@@ -367,7 +362,6 @@ __all__ = (
     "Mark",
     "Step",
     "SyncOnlyError",
-    "TimeFunctions",
     "from_change",
     "from_step",
     "installed",

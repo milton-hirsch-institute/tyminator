@@ -126,5 +126,9 @@ class PatchSet:
         else:
             object.__setattr__(self, key, value)
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.restore()
+        return None
+
 
 __all__ = ("Patch", "PatchSet", "Spec")

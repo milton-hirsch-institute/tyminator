@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import datetime
+import importlib
 import time
 from typing import cast
 
@@ -8,6 +9,7 @@ import pytest
 
 from pytest_timing import clock as clock_module
 from pytest_timing import defaults
+from tests.pytest_timing import target_module
 
 
 @dataclasses.dataclass(frozen=True)
@@ -26,6 +28,14 @@ class CallCollector:
 @pytest.fixture
 def call_collector(clock) -> CallCollector:
     return CallCollector(clock)
+
+
+@pytest.fixture(autouse=True)
+def reloaded_target_module():
+    try:
+        yield
+    finally:
+        importlib.reload(target_module)
 
 
 class TestFromStep:
@@ -685,48 +695,40 @@ class TestMark:
                 assert dt - mark == datetime.timedelta(seconds=4)
 
 
-class TestTimeFunctions:
-    def test_save(self):
+class TestInstalled:
+    @staticmethod
+    def test_standard(clock):
         original_time = time.time
         original_sleep = time.sleep
         original_async_sleep = asyncio.sleep
-        time_functions = clock_module.TimeFunctions.save()
-        assert time_functions.time is original_time
-        assert time_functions.sleep is original_sleep
-        assert time_functions.async_sleep is original_async_sleep
-        assert time.time is original_time
-        assert time.sleep is original_sleep
-        assert asyncio.sleep is original_async_sleep
+        with clock_module.installed(clock) as time_functions:
+            assert time.time == clock.time_function
+            assert time.sleep == clock.sleep_function
+            assert asyncio.sleep == clock.async_sleep_function
+            assert time_functions.time is original_time
+            assert time_functions.sleep is original_sleep
+            assert time_functions.async_sleep is original_async_sleep
+        assert time.time == time_functions.time
+        assert time.sleep == time_functions.sleep
+        assert asyncio.sleep == time_functions.async_sleep
 
-    def test_restore(self):
-        time_functions = clock_module.TimeFunctions(
-            time.time, time.sleep, asyncio.sleep
-        )
-        try:
-            time.time = "time-function"
-            time.sleep = "sleep-function"
-            asyncio.sleep = "async-sleep-function"
-            time_functions.restore()
-            assert time.time is time_functions.time
-            assert time.sleep is time_functions.sleep
-            assert asyncio.sleep is time_functions.async_sleep
-        finally:
-            time.time = time_functions.time
-            time.sleep = time_functions.sleep
-            asyncio.sleep = time_functions.async_sleep
-
-
-def test_install(clock):
-    original_time = time.time
-    original_sleep = time.sleep
-    original_async_sleep = asyncio.sleep
-    with clock_module.installed(clock) as time_functions:
-        assert time.time == clock.time_function
-        assert time.sleep == clock.sleep_function
-        assert asyncio.sleep == clock.async_sleep_function
-        assert time_functions.time is original_time
-        assert time_functions.sleep is original_sleep
-        assert time_functions.async_sleep is original_async_sleep
-    assert time.time == time_functions.time
-    assert time.sleep == time_functions.sleep
-    assert asyncio.sleep == time_functions.async_sleep
+    @staticmethod
+    def test_alternate(clock):
+        original_time = target_module.time_func
+        original_sleep = target_module.sleep_func
+        original_async_sleep = target_module.async_sleep_func
+        with clock_module.installed(
+            clock,
+            time=target_module.time_func,
+            sleep=target_module.sleep_func,
+            async_sleep=target_module.async_sleep_func,
+        ) as time_functions:
+            assert target_module.time_func == clock.time_function
+            assert target_module.sleep_func == clock.sleep_function
+            assert target_module.async_sleep_func == clock.async_sleep_function
+            assert time_functions.time == original_time
+            assert time_functions.sleep == original_sleep
+            assert time_functions.async_sleep == original_async_sleep
+        assert target_module.time_func == time_functions.time
+        assert target_module.sleep_func == time_functions.sleep
+        assert target_module.async_sleep_func == time_functions.async_sleep

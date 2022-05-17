@@ -31,18 +31,18 @@ def double_nested_spec():
 
 
 @pytest.fixture
-def time_func_spec():
-    return monkey_patch.Spec(target_module.__name__, "time_func")
+def object1_spec():
+    return monkey_patch.Spec(target_module.__name__, "object1")
 
 
 @pytest.fixture
-def sleep_func_spec():
-    return monkey_patch.Spec(target_module.__name__, "sleep_func")
+def object2_spec():
+    return monkey_patch.Spec(target_module.__name__, "object2")
 
 
 @pytest.fixture
-def async_sleep_func_spec():
-    return monkey_patch.Spec(target_module.__name__, "async_sleep_func")
+def object3_spec():
+    return monkey_patch.Spec(target_module.__name__, "object3")
 
 
 @pytest.fixture
@@ -61,11 +61,11 @@ def double_nested_patch(double_nested_spec):
 
 
 @pytest.fixture
-def patch_set(time_func_spec, sleep_func_spec, async_sleep_func_spec):
+def patch_set(object1_spec, object2_spec, object3_spec):
     return monkey_patch.PatchSet(
-        time=time_func_spec,
-        sleep=sleep_func_spec,
-        async_sleep=async_sleep_func_spec,
+        object1=object1_spec,
+        object2=object2_spec,
+        object3=object3_spec,
     )
 
 
@@ -205,20 +205,20 @@ class TestPatchSet:
     class TestConstructor:
         @staticmethod
         def test_from_spec(patch_set):
-            assert patch_set.time == target_module.time_func
-            assert patch_set.sleep == target_module.sleep_func
-            assert patch_set.async_sleep == target_module.async_sleep_func
+            assert patch_set.object1 is target_module.object1
+            assert patch_set.object2 is target_module.object2
+            assert patch_set.object3 is target_module.object3
 
         @staticmethod
         def test_from_target():
             patch_set = monkey_patch.PatchSet(
-                time=target_module.time_func,
-                sleep=target_module.sleep_func,
-                async_sleep=target_module.async_sleep_func,
+                object1=target_module.object1,
+                object2=target_module.object2,
+                object3=target_module.object3,
             )
-            assert patch_set.time == target_module.time_func
-            assert patch_set.sleep == target_module.sleep_func
-            assert patch_set.async_sleep == target_module.async_sleep_func
+            assert patch_set.object1 == target_module.object1
+            assert patch_set.object2 == target_module.object2
+            assert patch_set.object3 == target_module.object3
 
     class TestAttributes:
         @staticmethod
@@ -227,7 +227,7 @@ class TestPatchSet:
             with pytest.raises(
                 AttributeError, match=r"'PatchSet' object has no attribute 'time_func'"
             ):
-                patch_set.time_func = target_module.time_func
+                patch_set.time_func = target_module.object1
 
         @staticmethod
         def test_no_such_patch(patch_set):
@@ -238,12 +238,12 @@ class TestPatchSet:
         @staticmethod
         def test_missing_patches(patch_set):
             with pytest.raises(
-                ValueError, match=r"^missing patches: async_sleep, sleep$"
+                ValueError, match=r"^missing patches: object2, object3$"
             ):
-                patch_set.install(time=object())
-            assert target_module.time_func is patch_set.time
-            assert target_module.sleep_func is patch_set.sleep
-            assert target_module.async_sleep_func is patch_set.async_sleep
+                patch_set.install(object1=object())
+            assert target_module.object1 is patch_set.object1
+            assert target_module.object2 is patch_set.object2
+            assert target_module.object3 is patch_set.object3
 
         @staticmethod
         def test_unexpected_patches(patch_set):
@@ -251,32 +251,32 @@ class TestPatchSet:
                 ValueError, match=r"unexpected patches: unknown1, unknown2"
             ):
                 patch_set.install(
-                    time=object(),
-                    sleep=object(),
-                    async_sleep=object(),
+                    object1=object(),
+                    object2=object(),
+                    object3=object(),
                     unknown1=object(),
                     unknown2=object(),
                 )
-            assert target_module.time_func is patch_set.time
-            assert target_module.sleep_func is patch_set.sleep
-            assert target_module.async_sleep_func is patch_set.async_sleep
+            assert target_module.object1 is patch_set.object1
+            assert target_module.object2 is patch_set.object2
+            assert target_module.object3 is patch_set.object3
 
         @staticmethod
         def test_install(patch_set):
-            time = object()
-            sleep = object()
-            async_sleep = object()
-            patch_set.install(time=time, sleep=sleep, async_sleep=async_sleep)
-            assert target_module.time_func is time
-            assert target_module.sleep_func is sleep
-            assert target_module.async_sleep_func is async_sleep
+            object1 = object()
+            object2 = object()
+            object3 = object()
+            patch_set.install(object1=object1, object2=object2, object3=object3)
+            assert target_module.object1 is object1
+            assert target_module.object2 is object2
+            assert target_module.object3 is object3
 
     @staticmethod
     def test_restore(patch_set):
-        target_module.time_func = "time"
-        target_module.sleep_func = "sleep"
-        target_module.async_sleep_func = "async_sleep"
+        target_module.object1 = object()
+        target_module.object2 = object()
+        target_module.object3 = object()
         patch_set.restore()
-        assert target_module.time_func is patch_set.time
-        assert target_module.sleep_func is patch_set.sleep
-        assert target_module.async_sleep_func is patch_set.async_sleep
+        assert target_module.object1 is patch_set.object1
+        assert target_module.object2 is patch_set.object2
+        assert target_module.object3 is patch_set.object3
