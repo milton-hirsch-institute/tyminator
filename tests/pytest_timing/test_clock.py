@@ -234,8 +234,7 @@ class TestClock:
                     2014, 1, 1, 19, tzinfo=datetime.timezone.utc
                 )
 
-    @pytest.mark.asyncio
-    class TestAsyncElapse:
+    class TestElapse:
         @staticmethod
         @pytest.mark.parametrize(
             "change",
@@ -249,9 +248,9 @@ class TestClock:
                 [s * 0.5 for s in range(-3, 0)],
             ),
         )
-        async def test_negative_changes(clock, change):
+        def test_negative_changes(clock, change):
             with pytest.raises(ValueError, match="^change must be positive"):
-                assert await clock.async_elapse(change)
+                assert clock.elapse(change)
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -259,8 +258,8 @@ class TestClock:
             cast(list[clock_module.Change], list(range(3)))
             + cast(list[clock_module.Change], list(s * 0.5 for s in range(3))),
         )
-        async def test_positive_number(clock, change):
-            await clock.async_elapse(change)
+        def test_positive_number(clock, change):
+            clock.elapse(change)
             assert clock.current_datetime == clock.start + clock_module.from_change(
                 change
             )
@@ -269,32 +268,16 @@ class TestClock:
         @pytest.mark.parametrize(
             "change", [datetime.timedelta(seconds=s) for s in range(1, 3)]
         )
-        async def test_positive_timedelta(clock, change):
-            await clock.async_elapse(change)
+        def test_positive_timedelta(clock, change):
+            clock.elapse(change)
             assert clock.current_datetime == clock.start + change
 
         @staticmethod
-        async def test_locked(clock):
+        def test_locked(clock):
             with clock.lock():
                 with pytest.raises(clock_module.LockError, match="^already locked$"):
-                    await clock.async_elapse(clock.step)
+                    clock.elapse(clock.step)
                 assert clock.current_datetime == clock.start
-
-    class TestElapse:
-        @staticmethod
-        def test_sync(clock):
-            clock.elapse(2)
-            assert clock.current_tz_datetime == clock.tz_start + (clock.step * 2)
-
-        @staticmethod
-        @pytest.mark.asyncio
-        async def test_async(clock):
-            with pytest.raises(
-                clock_module.SyncOnlyError,
-                match="^only callable from synchronous functions$",
-            ):
-                clock.elapse(2)
-            assert clock.current_tz_datetime == clock.tz_start
 
     @pytest.mark.parametrize("clock_step", [1, 5, datetime.timedelta(minutes=2)])
     class TestNextDatetime:
@@ -380,12 +363,6 @@ class TestClock:
                     assert next_timestamp == clock.start.timestamp()
                     assert clock.current_timestamp == next_timestamp
 
-        @staticmethod
-        @pytest.mark.asyncio
-        async def test_async(clock, clock_step):
-            clock.time_function()
-            assert clock.current_datetime == clock.start
-
     @staticmethod
     @pytest.mark.parametrize("secs", [0, 1, 2, 0.0, 0.1, 2.2])
     def test_sleep_function(clock, secs):
@@ -430,6 +407,13 @@ class TestClock:
                 clock.run_at(call_collector, when)
 
         @staticmethod
+        def test_run_at_async(clock, call_collector):
+            clock.run_at(call_collector.as_async, clock.current_datetime)
+            with pytest.raises(NotImplementedError):
+                clock.elapse_steps()
+            assert call_collector.calls == []
+
+        @staticmethod
         def test_run_at_beginning(clock, call_collector):
             clock.run_at(call_collector, clock.current_datetime)
             clock.elapse_steps()
@@ -452,20 +436,6 @@ class TestClock:
             clock.run_at(call_collector, d3)
             clock.run_at(call_collector, d4)
             clock.elapse_steps(3)
-            assert call_collector.calls == [d1, d2, d3, d4]
-
-        @staticmethod
-        @pytest.mark.asyncio
-        async def test_async(clock, call_collector):
-            d1 = clock.current_datetime + datetime.timedelta(seconds=1)
-            d2 = clock.current_datetime + datetime.timedelta(seconds=1.5)
-            d3 = clock.current_datetime + datetime.timedelta(seconds=1.5)
-            d4 = clock.current_datetime + datetime.timedelta(seconds=2)
-            clock.run_at(call_collector.as_async, d1)
-            clock.run_at(call_collector.as_async, d2)
-            clock.run_at(call_collector.as_async, d3)
-            clock.run_at(call_collector.as_async, d4)
-            await clock.async_elapse_steps(3)
             assert call_collector.calls == [d1, d2, d3, d4]
 
     @staticmethod

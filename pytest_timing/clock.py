@@ -5,7 +5,6 @@ import datetime
 import functools
 import operator
 from typing import Any
-from typing import Awaitable
 from typing import Callable
 from typing import Final
 from typing import Union
@@ -22,10 +21,6 @@ _ZERO_TIMEDELTA: Final = datetime.timedelta()
 
 class LockError(Exception):
     """Raised when trying to take a step when clock not ready."""
-
-
-class SyncOnlyError(Exception):
-    """Raised when calling a synchronous only function in synchronous code."""
 
 
 def from_step(step: Any) -> datetime.timedelta:
@@ -149,44 +144,28 @@ class Clock:
             dt = self.as_tz(dt)
         return dt.astimezone(datetime.timezone.utc)
 
-    async def __run_pending_events(self, until: datetime.datetime):
+    def __run_pending_events(self, until: datetime.datetime):
         while self.__event_queue and (event := self.__event_queue[0]).when <= until:
             self.__current_datetime = event.when
             del self.__event_queue[0]
             action = event.action
             if asyncio.iscoroutinefunction(action):
-                await cast(Awaitable, action(self))
+                raise NotImplementedError
             else:
                 action(self)
 
-    async def async_elapse(self, change: Change) -> None:
+    def elapse(self, change: Change) -> None:
         change = from_change(change)
         if change < _ZERO_TIMEDELTA:
             raise ValueError("change must be positive or zero")
 
         with self.lock():
             next_datetime = self.__current_datetime + change
-            await self.__run_pending_events(next_datetime)
+            self.__run_pending_events(next_datetime)
             self.__current_datetime = next_datetime
 
-    async def async_elapse_steps(self, steps: int = 1) -> None:
-        return await self.async_elapse(self.step * steps)
-
-    def elapse(self, change: Change) -> None:
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            asyncio.run(self.async_elapse(change))
-        else:
-            raise SyncOnlyError("only callable from synchronous functions")
-
-    def elapse_steps(self, steps: int = 1):
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            asyncio.run(self.async_elapse_steps(steps))
-        else:
-            raise SyncOnlyError("only callable from synchronous functions")
+    def elapse_steps(self, steps: int = 1) -> None:
+        return self.elapse(self.step * steps)
 
     def next_datetime(self) -> datetime.datetime:
         current_datetime = self.__current_datetime
@@ -202,9 +181,8 @@ class Clock:
     def time_function(self) -> float:
         try:
             return self.next_timestamp()
-        except (LockError, SyncOnlyError):
-            pass
-        return self.current_timestamp
+        except LockError:
+            return self.current_timestamp
 
     def sleep_function(self, secs) -> None:
         asyncio.run(self.async_sleep_function(secs))
@@ -215,7 +193,7 @@ class Clock:
         if not isinstance(delay, (int, float)):
             raise TypeError("must be int or float")
         delay = float(delay)
-        await self.async_elapse(delay)
+        self.elapse(delay)
         return result
 
     def next_timestamp(self) -> float:
@@ -361,7 +339,6 @@ __all__ = (
     "LockError",
     "Mark",
     "Step",
-    "SyncOnlyError",
     "from_change",
     "from_step",
     "installed",
