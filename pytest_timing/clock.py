@@ -264,7 +264,7 @@ class Mark:
         return self.clock.as_utc(self.tz_when)
 
     @functools.cached_property
-    def elpased(self) -> datetime.timedelta:
+    def elapsed(self) -> datetime.timedelta:
         return self.when - self.clock.start
 
     def __lt__(self, other) -> bool:

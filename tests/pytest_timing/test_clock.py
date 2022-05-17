@@ -542,10 +542,10 @@ class TestMark:
             assert sorted(unordered) == [m1, m2, m3, m4, m5]
 
     @staticmethod
-    def test_elpased(clock):
+    def test_elapsed(clock):
         clock.elapse_steps(5)
         mark = clock.mark()
-        assert mark.elpased == (clock.start + (clock.step * 5)) - clock.start
+        assert mark.elapsed == (clock.start + (clock.step * 5)) - clock.start
 
     class TestAdd:
         @staticmethod
