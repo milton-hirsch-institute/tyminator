@@ -344,7 +344,7 @@ class TestClock:
         @staticmethod
         def test_locked(clock):
             with clock.lock():
-                for step in range(4):
+                for _ in range(4):
                     next_timestamp = clock.time_function()
                     assert next_timestamp == clock.start.timestamp()
                     assert clock.current_timestamp == next_timestamp
