@@ -504,6 +504,29 @@ class TestClock:
                     with clock.lock():
                         pytest.fail("nested locks not supported")
 
+    class TestFromDatetime:
+        @staticmethod
+        def test_naive():
+            dt = datetime.datetime(2018, 11, 11, 11)
+            clock = clock_module.Clock.from_datetime(dt, 5)
+            assert clock.start == dt
+            assert clock.step == datetime.timedelta(seconds=5)
+            assert clock.local_tz == datetime.timezone.utc
+
+        @staticmethod
+        def test_tz():
+            dt = datetime.datetime(
+                2018,
+                11,
+                11,
+                11,
+                tzinfo=datetime.timezone(datetime.timedelta(seconds=10)),
+            )
+            clock = clock_module.Clock.from_datetime(dt, 5)
+            assert clock.start == dt.replace(tzinfo=None)
+            assert clock.step == datetime.timedelta(seconds=5)
+            assert clock.local_tz == datetime.timezone(datetime.timedelta(seconds=10))
+
 
 class TestMark:
     class TestSorting:
@@ -671,13 +694,14 @@ class TestInstalled:
         original_time = time.time
         original_sleep = time.sleep
         original_async_sleep = asyncio.sleep
-        with clock_module.installed(clock) as time_functions:
+        with clock_module.installed(clock) as (time_functions, clk):
             assert time.time == clock.time_function
             assert time.sleep == clock.sleep_function
             assert asyncio.sleep == clock.async_sleep_function
             assert time_functions.time is original_time
             assert time_functions.sleep is original_sleep
             assert time_functions.async_sleep is original_async_sleep
+            assert clk is clock
         assert time.time == time_functions.time
         assert time.sleep == time_functions.sleep
         assert asyncio.sleep == time_functions.async_sleep
@@ -692,13 +716,32 @@ class TestInstalled:
             time=target_module.time_func,
             sleep=target_module.sleep_func,
             async_sleep=target_module.async_sleep_func,
-        ) as time_functions:
+        ) as (time_functions, clk):
             assert target_module.time_func == clock.time_function
             assert target_module.sleep_func == clock.sleep_function
             assert target_module.async_sleep_func == clock.async_sleep_function
             assert time_functions.time == original_time
             assert time_functions.sleep == original_sleep
             assert time_functions.async_sleep == original_async_sleep
+            assert clk is clock
         assert target_module.time_func == time_functions.time
         assert target_module.sleep_func == time_functions.sleep
         assert target_module.async_sleep_func == time_functions.async_sleep
+
+    @staticmethod
+    def test_datetime():
+        dt = datetime.datetime(2018, 11, 11, 11)
+        with clock_module.installed(dt) as (_, clock):
+            assert clock.start == dt
+            assert clock.step == datetime.timedelta(seconds=1)
+            assert clock.local_tz == datetime.timezone.utc
+
+    @staticmethod
+    def test_tz_datetime():
+        dt = datetime.datetime(
+            2018, 11, 11, 11, tzinfo=datetime.timezone(datetime.timedelta(hours=10))
+        )
+        with clock_module.installed(dt) as (_, clock):
+            assert clock.start == dt.replace(tzinfo=None)
+            assert clock.step == datetime.timedelta(seconds=1)
+            assert clock.local_tz == datetime.timezone(datetime.timedelta(hours=10))

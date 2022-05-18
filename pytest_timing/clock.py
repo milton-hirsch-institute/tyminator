@@ -251,6 +251,16 @@ class Clock:
         finally:
             del self.__is_locked
 
+    @classmethod
+    def from_datetime(cls, dt: datetime.datetime, step: Step = 1) -> "Clock":
+        if dt.tzinfo is not None:
+            local_tz = dt.tzinfo
+            dt = dt.replace(tzinfo=None)
+        else:
+            local_tz = datetime.timezone.utc
+
+        return Clock(dt, step, local_tz=local_tz)
+
 
 @dataclasses.dataclass(frozen=True)
 @functools.total_ordering
@@ -312,12 +322,15 @@ class Mark:
 
 @contextlib.contextmanager
 def installed(
-    clock: Clock,
+    clock: Union[Clock, datetime.datetime],
     *,
     time: Any = monkey_patch.Spec("time", "time"),
     sleep: Any = monkey_patch.Spec("time", "sleep"),
     async_sleep: Any = monkey_patch.Spec("asyncio", "sleep"),
 ):
+    if isinstance(clock, datetime.datetime):
+        clock = Clock.from_datetime(clock)
+
     time_functions = monkey_patch.PatchSet(
         time=time, sleep=sleep, async_sleep=async_sleep
     )
@@ -327,7 +340,7 @@ def installed(
             sleep=clock.sleep_function,
             async_sleep=clock.async_sleep_function,
         )
-        yield time_functions
+        yield time_functions, clock
     finally:
         time_functions.restore()
 
