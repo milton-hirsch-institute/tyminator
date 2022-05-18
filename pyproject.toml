@@ -53,3 +53,4 @@ reportUnnecessaryCast = true
 reportUnsupportedDunderAll = true
 
 [tool.pytest.ini_options]
+asyncio_mode = "strict"
