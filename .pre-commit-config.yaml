@@ -47,6 +47,6 @@ repos:
       - id: test
         name: tests
         language: system
-        entry: poetry run pytest --cov
+        entry: poetry run pytest
         types: [python]
         pass_filenames: false
