@@ -3,7 +3,6 @@ import dataclasses
 import datetime
 import importlib
 import time
-from typing import cast
 
 import pytest
 
@@ -40,12 +39,6 @@ def reloaded_target_module():
 
 class TestFromStep:
     @staticmethod
-    @pytest.mark.parametrize("bad_step", [None, "1", defaults.DEFAULT_CLOCK_START])
-    def test_invalid_types(bad_step):
-        with pytest.raises(TypeError, match=r"^invalid step"):
-            clock_module.from_step(bad_step)
-
-    @staticmethod
     @pytest.mark.parametrize("int_step", range(1, 5))
     def test_int(int_step):
         expected = datetime.timedelta(seconds=int_step)
@@ -60,16 +53,9 @@ class TestFromStep:
 
 class TestFromChange:
     @staticmethod
-    @pytest.mark.parametrize("bad_change", [None, "1", defaults.DEFAULT_CLOCK_START])
-    def test_invalid_types(bad_change):
-        with pytest.raises(TypeError, match=r"^invalid change$"):
-            clock_module.from_change(bad_change)
-
-    @staticmethod
     @pytest.mark.parametrize(
         "number_change",
-        cast(list[clock_module.Change], list(range(-2, 3)))
-        + cast(list[clock_module.Change], [i * 0.5 for i in range(-2, 3)]),
+        [*range(-2, 3), *[i * 0.5 for i in range(-2, 3)]],
     )
     def test_numbers(number_change):
         expected = datetime.timedelta(seconds=number_change)
@@ -170,38 +156,36 @@ class TestClock:
     class TestTzConversion:
         @staticmethod
         @pytest.fixture
-        def unaware():
+        def naive():
             return datetime.datetime(2014, 1, 1, 12)
 
         @staticmethod
         @pytest.fixture
-        def tz(unaware):
-            return unaware.replace(
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-7))
-            )
+        def tz(naive):
+            return naive.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=-7)))
 
         @staticmethod
         @pytest.fixture
         def utc(tz):
             return tz.astimezone(datetime.timezone.utc)
 
-        class TestAsUnaware:
+        class TestAsNaive:
             @staticmethod
-            def test_unaware(clock, unaware):
-                assert clock.as_unaware(unaware) is unaware
+            def test_naive(clock, naive):
+                assert clock.as_naive(naive) is naive
 
             @staticmethod
             def test_tz(clock, tz):
-                assert clock.as_unaware(tz) == datetime.datetime(2014, 1, 1, 21)
+                assert clock.as_naive(tz) == datetime.datetime(2014, 1, 1, 21)
 
             @staticmethod
             def test_utc(clock, utc):
-                assert clock.as_unaware(utc) == datetime.datetime(2014, 1, 1, 21)
+                assert clock.as_naive(utc) == datetime.datetime(2014, 1, 1, 21)
 
         class TestAsTz:
             @staticmethod
-            def test_unaware(clock, unaware, clock_local_tz):
-                assert clock.as_tz(unaware) == unaware.replace(tzinfo=clock_local_tz)
+            def test_naive(clock, naive, clock_local_tz):
+                assert clock.as_tz(naive) == naive.replace(tzinfo=clock_local_tz)
 
             @staticmethod
             def test_tz(clock, tz, clock_local_tz):
@@ -217,8 +201,8 @@ class TestClock:
 
         class TestAsUtc:
             @staticmethod
-            def test_unaware(clock, unaware):
-                assert clock.as_utc(unaware) == datetime.datetime(
+            def test_naive(clock, naive):
+                assert clock.as_utc(naive) == datetime.datetime(
                     2014, 1, 1, 10, tzinfo=datetime.timezone.utc
                 )
 
@@ -238,26 +222,18 @@ class TestClock:
         @staticmethod
         @pytest.mark.parametrize(
             "change",
-            cast(list[clock_module.Change], list(range(-3, 0)))
-            + cast(
-                list[clock_module.Change],
-                [datetime.timedelta(seconds=s) for s in range(-3, 0)],
-            )
-            + cast(
-                list[clock_module.Change],
-                [s * 0.5 for s in range(-3, 0)],
-            ),
+            [
+                *range(-3, 0),
+                *[datetime.timedelta(seconds=s) for s in range(-3, 0)],
+                *[s * 0.5 for s in range(-3, 0)],
+            ],
         )
         def test_negative_changes(clock, change):
             with pytest.raises(ValueError, match="^change must be positive"):
                 assert clock.elapse(change)
 
         @staticmethod
-        @pytest.mark.parametrize(
-            "change",
-            cast(list[clock_module.Change], list(range(3)))
-            + cast(list[clock_module.Change], list(s * 0.5 for s in range(3))),
-        )
+        @pytest.mark.parametrize("change", [*range(3), *(s * 0.5 for s in range(3))])
         def test_positive_number(clock, change):
             clock.elapse(change)
             assert clock.current_datetime == clock.start + clock_module.from_change(
@@ -358,7 +334,7 @@ class TestClock:
         @staticmethod
         def test_locked(clock):
             with clock.lock():
-                for step in range(4):
+                for _ in range(4):
                     next_timestamp = clock.time_function()
                     assert next_timestamp == clock.start.timestamp()
                     assert clock.current_timestamp == next_timestamp
@@ -579,10 +555,10 @@ class TestMark:
             assert sorted(unordered) == [m1, m2, m3, m4, m5]
 
     @staticmethod
-    def test_elpased(clock):
+    def test_elapsed(clock):
         clock.elapse_steps(5)
         mark = clock.mark()
-        assert mark.elpased == (clock.start + (clock.step * 5)) - clock.start
+        assert mark.elapsed == (clock.start + (clock.step * 5)) - clock.start
 
     class TestAdd:
         @staticmethod

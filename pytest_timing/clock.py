@@ -8,7 +8,6 @@ from typing import Any
 from typing import Callable
 from typing import Final
 from typing import Union
-from typing import cast
 
 from pytest_timing.util import monkey_patch
 
@@ -23,13 +22,11 @@ class LockError(Exception):
     """Raised when trying to take a step when clock not ready."""
 
 
-def from_step(step: Any) -> datetime.timedelta:
+def from_step(step: Step) -> datetime.timedelta:
     if isinstance(step, int):
         return datetime.timedelta(seconds=step)
-    elif isinstance(step, datetime.timedelta):
-        return step
     else:
-        raise TypeError("invalid step")
+        return step
 
 
 def from_change(change: Change) -> datetime.timedelta:
@@ -37,10 +34,8 @@ def from_change(change: Change) -> datetime.timedelta:
         change = float(change)
     if isinstance(change, float):
         return datetime.timedelta(seconds=change)
-    elif isinstance(change, datetime.timedelta):
-        return change
     else:
-        raise TypeError("invalid change")
+        return change
 
 
 class Clock:
@@ -57,7 +52,7 @@ class Clock:
     __local_tz: datetime.tzinfo
     __step: datetime.timedelta
     __is_locked: bool = False
-    __event_queue: list[__Event] = cast(list[__Event], [])
+    __event_queue: list[__Event] = []
     __mark_seq: int = 0
 
     def __init__(
@@ -126,7 +121,7 @@ class Clock:
     def is_locked(self) -> bool:
         return self.__is_locked
 
-    def as_unaware(self, dt: datetime.datetime):
+    def as_naive(self, dt: datetime.datetime):
         if dt.tzinfo is not None:
             if dt.tzinfo != self.__local_tz:
                 dt = self.as_tz(dt)
@@ -221,7 +216,7 @@ class Clock:
         return self.as_utc(self.tz_dt_at_step(step))
 
     def run_at(self, action: Action, when: datetime.datetime):
-        when = self.as_unaware(when)
+        when = self.as_naive(when)
         if when < self.__current_datetime:
             raise ValueError("time must be in the future")
         event = self.__Event(when=when, action=action)
@@ -279,7 +274,7 @@ class Mark:
         return self.clock.as_utc(self.tz_when)
 
     @functools.cached_property
-    def elpased(self) -> datetime.timedelta:
+    def elapsed(self) -> datetime.timedelta:
         return self.when - self.clock.start
 
     def __lt__(self, other) -> bool:
@@ -305,7 +300,7 @@ class Mark:
             other = other.when
 
         if isinstance(other, datetime.datetime):
-            other = self.clock.as_unaware(other)
+            other = self.clock.as_naive(other)
 
         if isinstance(other, (datetime.timedelta, datetime.datetime)):
             return self.when - other
@@ -314,7 +309,7 @@ class Mark:
 
     def __rsub__(self, other):
         if isinstance(other, datetime.datetime):
-            other = self.clock.as_unaware(other)
+            other = self.clock.as_naive(other)
             return other - self.when
 
         return NotImplemented
