@@ -55,7 +55,7 @@ class TestFromChange:
     @staticmethod
     @pytest.mark.parametrize(
         "number_change",
-        [*list(range(-2, 3)), *[i * 0.5 for i in range(-2, 3)]],
+        [*range(-2, 3), *[i * 0.5 for i in range(-2, 3)]],
     )
     def test_numbers(number_change):
         expected = datetime.timedelta(seconds=number_change)
@@ -223,7 +223,7 @@ class TestClock:
         @pytest.mark.parametrize(
             "change",
             [
-                *list(range(-3, 0)),
+                *range(-3, 0),
                 *[datetime.timedelta(seconds=s) for s in range(-3, 0)],
                 *[s * 0.5 for s in range(-3, 0)],
             ],
@@ -233,9 +233,7 @@ class TestClock:
                 assert clock.elapse(change)
 
         @staticmethod
-        @pytest.mark.parametrize(
-            "change", [*list(range(3)), *list(s * 0.5 for s in range(3))]
-        )
+        @pytest.mark.parametrize("change", [*range(3), *(s * 0.5 for s in range(3))])
         def test_positive_number(clock, change):
             clock.elapse(change)
             assert clock.current_datetime == clock.start + clock_module.from_change(
