@@ -5,8 +5,8 @@ import datetime
 
 import pytest
 
-from pytest_timing import clock as clock_module
-from pytest_timing import defaults
+from tyminator import clock as clock_module
+from tyminator import defaults
 
 
 @pytest.fixture

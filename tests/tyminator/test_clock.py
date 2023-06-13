@@ -9,9 +9,9 @@ import time
 
 import pytest
 
-from pytest_timing import clock as clock_module
-from pytest_timing import defaults
-from tests.pytest_timing import target_module
+from tyminator import clock as clock_module
+from tyminator import defaults
+from tests.tyminator import target_module
 
 
 @dataclasses.dataclass(frozen=True)
