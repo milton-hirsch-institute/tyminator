@@ -1,3 +1,7 @@
+# Copyright 2023 Rafe Kaplan
+# SPDX-License-Identifier: Apache-2.0
+
+
 def time_func():
     pass
 
