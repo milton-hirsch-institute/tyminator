@@ -8,13 +8,12 @@ import pytest
 
 from pytest_timing import clock
 from pytest_timing import defaults
-from pytest_timing import plugin
 from pytest_timing.util import monkey_patch
 
 TYPING_VALUE_IDS = {id(v := getattr(typing, s)): v for s in dir(typing)}
 
 
-@pytest.mark.parametrize("module", [clock, defaults, plugin, monkey_patch])
+@pytest.mark.parametrize("module", [clock, defaults, monkey_patch])
 class TestModule:
     @staticmethod
     def test_has_all(module):
