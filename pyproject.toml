@@ -9,12 +9,8 @@ packages = [
     {include = "pytest_timing", from = "."}
 ]
 
-[tool.poetry.plugins."pytest11"]
-"timing" = "pytest_timing.plugin"
-
 [tool.poetry.dependencies]
 python = "^3.9"
-pytest = "^7.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.0"
@@ -22,6 +18,7 @@ coverage = "^6.3"
 flake8 = "^4.0"
 isort = "^5.10"
 pyright = "^1.1"
+pytest = "^7.1"
 pytest-asyncio = "^0.18.3"
 pytest-cov = "^3.0"
 
