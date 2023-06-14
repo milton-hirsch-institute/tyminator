@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from pytest_timing.util import monkey_patch
-from tests.pytest_timing.util import target_module
+from tests.tyminator.util import target_module
+from tyminator.util import monkey_patch
 
 
 @pytest.fixture(autouse=True)

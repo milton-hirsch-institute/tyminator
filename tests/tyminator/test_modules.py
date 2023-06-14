@@ -6,9 +6,9 @@ import typing
 
 import pytest
 
-from pytest_timing import clock
-from pytest_timing import defaults
-from pytest_timing.util import monkey_patch
+from tyminator import clock
+from tyminator import defaults
+from tyminator.util import monkey_patch
 
 TYPING_VALUE_IDS = {id(v := getattr(typing, s)): v for s in dir(typing)}
 

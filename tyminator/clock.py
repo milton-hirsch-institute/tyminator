@@ -12,7 +12,7 @@ from typing import Callable
 from typing import Final
 from typing import Union
 
-from pytest_timing.util import monkey_patch
+from tyminator.util import monkey_patch
 
 Change = Union[int, float, datetime.timedelta]
 Step = Union[int, datetime.timedelta]

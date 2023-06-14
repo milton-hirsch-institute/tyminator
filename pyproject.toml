@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "pytest-timing"
+name = "tyminator"
 version = "0.1.0"
-description = "pytest plugin for testing time-dependent functionality"
+description = "Fake timing tools for testing time-dependent functionality"
 authors = [
     "Rafe Kaplan <slobberchops@gmail.com>",
 ]
 packages = [
-    {include = "pytest_timing", from = "."}
+    {include = "tyminator", from = "."}
 ]
 
 [tool.poetry.dependencies]
