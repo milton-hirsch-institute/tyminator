@@ -11,8 +11,10 @@ jobs:
   publish:
     runs-on: ubuntu-20.04
     name: Builds and publishes release.
+    permissions:
+      id-token: write
+      contents: write
     steps:
-
     - uses: actions/checkout@v3
 
     - name: Install Poetry
@@ -50,17 +52,8 @@ jobs:
         dist/test-installation/bin/pip
         install dist/${{ env.release_full }}.tar.gz
 
-    - name: Install twine
-      run: pipx install twine
-
-    - name: Upload package
-      env:
-        TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-      run: >
-        twine upload
-        --username __token__
-        --disable-progress-bar --non-interactive
-        dist/${{ env.release_full }}.tar.gz
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
 
     - name: Create Github release
       id: create-release
