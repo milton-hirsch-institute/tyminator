@@ -45,11 +45,11 @@ jobs:
       run: poetry build -f sdist
 
     - name: Create test installation environment
-      run: python -m venv dist/test-installation
+      run: python -m venv venv/test-installation
 
     - name: Test package installs into environment
       run: >
-        dist/test-installation/bin/pip
+        venv/test-installation/bin/pip
         install dist/${{ env.release_full }}.tar.gz
 
     - name: Publish package distributions to PyPI
