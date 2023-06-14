@@ -8,6 +8,25 @@ authors = [
 packages = [
     {include = "tyminator", from = "."}
 ]
+readme = "README.rst"
+homepage = "https://github.com/milton-hirsch-institute/tyminator"
+repository = "https://github.com/milton-hirsch-institute/tyminator"
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing :: Unit",
+    "Topic :: Software Development :: Testing",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -54,4 +73,3 @@ reportUnsupportedDunderAll = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
-addopts="-p no:timing"
