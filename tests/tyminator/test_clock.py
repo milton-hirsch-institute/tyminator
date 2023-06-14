@@ -9,9 +9,9 @@ import time
 
 import pytest
 
+from tests.tyminator import target_module
 from tyminator import clock as clock_module
 from tyminator import defaults
-from tests.tyminator import target_module
 
 
 @dataclasses.dataclass(frozen=True)

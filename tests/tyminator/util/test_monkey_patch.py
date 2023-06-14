@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from tyminator.util import monkey_patch
 from tests.tyminator.util import target_module
+from tyminator.util import monkey_patch
 
 
 @pytest.fixture(autouse=True)
