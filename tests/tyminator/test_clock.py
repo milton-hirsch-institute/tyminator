@@ -1,4 +1,4 @@
-# Copyright 2023 The Milton Hirsch Institute, B.V.
+# Copyright 2023-2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
@@ -403,6 +403,43 @@ class TestClock:
             clock.run_at(call_collector, clock.current_datetime + clock.step)
             clock.elapse_steps()
             assert call_collector.calls == [clock.start + clock.step]
+
+        @staticmethod
+        def test_run_at_multi(clock, call_collector):
+            clock.run_at(call_collector, clock.current_datetime + clock.step)
+            clock.run_at(call_collector, clock.current_datetime + clock.step * 2)
+            clock.elapse_steps()
+            assert call_collector.calls == [clock.start + clock.step]
+            clock.elapse_steps()
+            assert call_collector.calls == [
+                clock.start + clock.step,
+                clock.start + clock.step * 2,
+            ]
+
+        @staticmethod
+        def test_run_at_same_times(clock, call_collector):
+            clock.run_at(call_collector, clock.current_datetime + clock.step)
+            clock.run_at(call_collector, clock.current_datetime + clock.step)
+            clock.elapse_steps()
+            assert call_collector.calls == [
+                clock.start + clock.step,
+                clock.start + clock.step,
+            ]
+
+        @staticmethod
+        def test_run_at_multi_different_functions(clock):
+            order = []
+
+            def fn1(clock):
+                order.append(1)
+
+            def fn2(clock):
+                order.append(2)
+
+            clock.run_at(fn1, clock.current_datetime + clock.step)
+            clock.run_at(fn2, clock.current_datetime + clock.step)
+            clock.elapse_steps()
+            assert order == [1, 2]
 
         @staticmethod
         def test_run_all(clock, call_collector):

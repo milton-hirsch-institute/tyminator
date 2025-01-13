@@ -1,4 +1,4 @@
-# Copyright 2023 The Milton Hirsch Institute, B.V.
+# Copyright 2023-2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
@@ -46,8 +46,9 @@ class Clock:
     class __Event:
         when: datetime.datetime
         action: Action
+        sequence: int
 
-        SORT_KEY = operator.attrgetter("when", "action")
+        SORT_KEY = operator.attrgetter("when", "sequence")
 
     __current_datetime: datetime.datetime
     __start: datetime.datetime
@@ -57,6 +58,7 @@ class Clock:
     __is_locked: bool = False
     __event_queue: list[__Event] = []
     __mark_seq: int = 0
+    __event_seq: int = 0
 
     def __init__(
         self,
@@ -222,7 +224,8 @@ class Clock:
         when = self.as_naive(when)
         if when < self.__current_datetime:
             raise ValueError("time must be in the future")
-        event = self.__Event(when=when, action=action)
+        event = self.__Event(when=when, action=action, sequence=self.__event_seq)
+        self.__event_seq += 1
         self.__event_queue.append(event)
         self.__event_queue.sort(key=self.__Event.SORT_KEY)
 
