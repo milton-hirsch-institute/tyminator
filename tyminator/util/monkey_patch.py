@@ -12,13 +12,29 @@ from typing import Any
 from typing import Optional
 
 
+"""
+This module provides rudimentary support for monkey patching python libraries.
+"""
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class Spec:
+    """
+    Monkey patch specification.
+
+    Describes a path to a python object intended as the target for monkey patching.
+    """
     module_name: str
     qualified_name: str
 
     @functools.cached_property
     def name(self) -> str:
+        """
+        Leaf name of monkey patched object.
+
+        For example, if the class `AClass` in module `amodule` has a function `a_function`
+        the qualified name is `AClass.a_function` while the name is `a_function`.
+        """
         return self.__qualified_name_tuple[-1]
 
     @functools.cached_property
@@ -27,6 +43,12 @@ class Spec:
 
     @functools.cached_property
     def parent_qualified_name(self) -> Optional[str]:
+        """
+        Qualified name of parent object if there is one, else None.
+
+        For example, if the class `AClass` in module `amodule` has a function `a_function`
+        the qualified name is `AClass.a_function` while the parent qualified name is `AClass`.
+        """
         parent_name = self.__qualified_name_tuple[:-1]
         return ".".join(parent_name) if parent_name else None
 
@@ -35,12 +57,20 @@ class Spec:
         return operator.attrgetter(self.qualified_name)
 
     def get_module(self) -> types.ModuleType:
+        """
+        Get module of object that contains monkey-patched object.
+        """
         try:
             return sys.modules[self.module_name]
         except KeyError:
             return importlib.import_module(self.module_name)
 
     def get_obj(self) -> Any:
+        """
+        Get object that is being patched from module.
+
+        Note: If object has been monkey patched, this will retrieve the patch itself.
+        """
         return self.__getter(self.get_module())
 
     @classmethod
@@ -50,7 +80,6 @@ class Spec:
 
 @dataclasses.dataclass(frozen=True)
 class Patch:
-
     original_obj: Any
     spec: Spec
 
