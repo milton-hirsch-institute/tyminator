@@ -32,7 +32,7 @@ classifiers = [
 python = "^3.9"
 
 [tool.poetry.dev-dependencies]
-black = "^22.0"
+black = "^24.3"
 coverage = "^6.3"
 flake8 = "^4.0"
 isort = "^5.10"
